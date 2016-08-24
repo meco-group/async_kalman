@@ -1,3 +1,5 @@
 Desired properties:
- * Asynchronous measurements
+ * Asynchronous measurement events
+ * Asynchronous zero-order hold contro events
  * Continuous systems
+
