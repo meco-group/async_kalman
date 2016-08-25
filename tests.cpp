@@ -1,6 +1,11 @@
 #include "async_kalman.hpp"
 #include <iostream>
+#include <iomanip>
 int main ( int argc , char *argv[] ) {
+
+  std::cout << std::scientific;
+  Eigen::IOFormat f(5, Eigen::DontAlignCols, " ", "\n", "[", "]", "[", "]");
+
   M A(2, 2);
   A << 1  , 0.1,
        0.2, 1.1;
@@ -11,7 +16,6 @@ int main ( int argc , char *argv[] ) {
   Q << 2, 0.1,
       0.1, 3;
 
-
   KalmanIntegrator ki(2);
 
   M Ad(2, 2);
@@ -19,9 +23,9 @@ int main ( int argc , char *argv[] ) {
   M Qd(2, 2);
   ki.integrate(A, B, Q, 0.1, Ad, Bd, Qd);
 
-  std::cout << Ad << std::endl;
-  std::cout << Bd << std::endl;
-  std::cout << Qd << std::endl;
+  std::cout << Ad.format(f) << std::endl;
+  std::cout << Bd.format(f) << std::endl;
+  std::cout << Qd.format(f) << std::endl;
 
   return 1;
 }

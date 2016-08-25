@@ -12,6 +12,7 @@ endif()
 find_package(Eigen3 REQUIRED)
 
 add_executable(main main.cpp)
+add_executable(tests tests.cpp)
 
 include_directories(${EIGEN3_INCLUDE_DIR})
 
@@ -19,3 +20,4 @@ add_library(async_kalman SHARED async_kalman.cpp async_kalman.hpp)
 target_link_libraries (async_kalman ${SLICOT_LIB})
 
 target_link_libraries (main async_kalman)
+target_link_libraries (tests async_kalman)

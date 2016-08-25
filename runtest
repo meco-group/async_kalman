@@ -1,0 +1,4 @@
+#!/bin/bash
+./tests > t1.txt
+python test.py > t2.txt
+diff --ignore-all-space t1.txt t2.txt
