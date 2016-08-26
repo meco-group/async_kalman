@@ -1,5 +1,7 @@
 import filterpy.common as common
 from filterpy.common import van_loan_discretization
+from pykalman.sqrt import CholeskyKalmanFilter
+from pykalman.sqrt.cholesky import _filter_predict
 import numpy as np
 
 np.set_printoptions(formatter={'all':lambda x: "%0.5e" % x})
@@ -10,7 +12,35 @@ B = np.matrix([[3],[4.0]])
 Q = np.matrix([[2  , 0.1],[0.1, 3]])
 
 Ad, Qd = van_loan_discretization(A, np.linalg.cholesky(Q), 0.1)
+Bd = np.linalg.inv(A)*(Ad-np.eye(2))*B
 
 print Ad
-print np.linalg.inv(A)*(Ad-np.eye(2))*B
+print Bd
 print Qd
+
+C = np.matrix([[0.3  , 4],[1, 2]])
+D = np.matrix([[0.7],[0.13]])
+
+S  = np.matrix([[3, 0], [2,7 ]])
+R  = np.matrix([[2, 0.1], [0.1, 2]])
+x0 = np.matrix([[1],[0.1]])
+u = 2
+
+kf = CholeskyKalmanFilter(
+    transition_matrices=Ad,
+    observation_matrices=C,
+    transition_covariance=Qd,
+    observation_covariance=R,
+    transition_offsets=np.array(Bd*u).squeeze(),
+    observation_offsets=np.array(D*u).squeeze(),
+    initial_state_mean=np.array(x0).squeeze(),
+    initial_state_covariance=S*S.T
+)
+
+(xp, Sp) = _filter_predict(Ad, np.linalg.cholesky(Qd),
+                    np.array(Bd*u).squeeze(), np.array(x0).squeeze(),
+                    S)
+
+Sp= np.matrix(Sp)
+print np.matrix(xp).T
+print Sp

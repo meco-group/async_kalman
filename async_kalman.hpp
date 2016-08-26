@@ -30,3 +30,26 @@ private:
   M Fd;
   M Fei;
 };
+
+class KalmanPropagator {
+public:
+  KalmanPropagator(int n, int nb);
+
+  void propagate(const M& x, const M& S, double t, M& xp, M& Sp, const M& A, const M& B, const M& Q, const M& u);
+
+private:
+  int n_;
+  int nb_;
+
+  M Mm;
+  Eigen::HouseholderQR<M> qr;
+
+  KalmanIntegrator ki;
+
+  M Ad;
+  M Bd;
+  M Qd;
+  M SQ;
+
+  Eigen::LLT<M> Qf;
+};

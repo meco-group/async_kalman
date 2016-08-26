@@ -44,6 +44,7 @@ KalmanIntegrator::KalmanIntegrator(int n) : n_(n), iwork_(2*n), dwork_(2*n*n*4) 
   Fei = M(2*n_, 2*n_);
 }
 
+
 void KalmanIntegrator::integrate(const M& A, const M& B, const M& Q, double t, M& Ad, M& Bd, M& Qd) {
 
   expm(A, t, Ad, Aei, iwork_, dwork_);
@@ -58,4 +59,26 @@ void KalmanIntegrator::integrate(const M& A, const M& B, const M& Q, double t, M
   expm(F, t, Fd, Fei, iwork_, dwork_);
   Qd = Fd.block(n_, n_, n_, n_).transpose()*Fd.block(0, n_, n_, n_);
 
+}
+
+KalmanPropagator::KalmanPropagator(int n, int nb) : n_(n), nb_(nb), Mm(2*n, n), qr(2*n, n), ki(n), Ad(n, n), Bd(n, nb), Qd(n, n), SQ(n, n), Qf(n) {
+
+
+}
+
+void KalmanPropagator::propagate(const M& x, const M& S, double t, M& xp, M& Sp, const M& A, const M& B, const M& Q, const M& u) {
+
+  // Discretize system
+  ki.integrate(A, B, Q, t, Ad, Bd, Qd);
+
+  // Propagate state
+  xp = Ad*x+Bd*u;
+
+  // Propagate covariance
+  Qf.compute(Qd);
+  SQ = Qf.matrixL();
+
+  Mm << (Ad*S).transpose(), SQ.transpose();
+  qr.compute(Mm);
+  Sp = qr.matrixQR().block(0, 0, n_, n_).triangularView<Eigen::Upper>().transpose();
 }

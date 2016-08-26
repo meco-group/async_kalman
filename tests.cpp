@@ -27,5 +27,24 @@ int main ( int argc , char *argv[] ) {
   std::cout << Bd.format(f) << std::endl;
   std::cout << Qd.format(f) << std::endl;
 
+  M x(2, 1);
+  x << 1 , 0.1;
+
+  M S(2, 2);
+  S << 3, 0,
+      2, 7;
+
+  M u(1, 1);
+  u << 2;
+
+  KalmanPropagator ks(2, 1);
+  M xp(2, 1);
+  M Sp(2, 2);
+  ks.propagate(x, S, 0.1, xp, Sp, A, B, Q, u);
+
+  std::cout << xp.format(f) << std::endl;
+  std::cout << Sp.format(f) << std::endl;
+
+
   return 1;
 }
