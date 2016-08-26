@@ -53,3 +53,30 @@ private:
 
   Eigen::LLT<M> Qf;
 };
+
+class KalmanObserver {
+public:
+  KalmanObserver(int n, int nb, int ny);
+
+  void observe(const M& x, const M& S, M& xp, M& Sp, const M& C, const M& D, const M& R, const M& z, const M& u);
+
+private:
+  int n_;
+  int nb_;
+  int ny_;
+
+  M Mm;
+  Eigen::HouseholderQR<M> qr;
+
+
+  M SR;
+
+  Eigen::LLT<M> Rf;
+
+  M zp;
+  M SZ;
+  M L;
+  M LZ;
+
+  Eigen::LLT<M> Sf;
+};

@@ -45,6 +45,32 @@ int main ( int argc , char *argv[] ) {
   std::cout << xp.format(f) << std::endl;
   std::cout << Sp.format(f) << std::endl;
 
+  M D(2,1);
+  D << 0.7,
+       0.13;
+
+  M C(2,2);
+  C << 0.3  , 4,
+      1, 2;
+
+  M z(2,1);
+  z << 1 , 0.2;
+
+  M R(2,2);
+  R << 2, 0.1,
+      0.1, 2;
+
+  KalmanObserver km(2, 1, 2);
+  km.observe(x, S, xp, Sp, C, D, R, z, u);
+
+  std::cout << xp.format(f) << std::endl;
+  std::cout << (Sp*Sp.transpose()).format(f) << std::endl;
+
+  KalmanObserver km2(2, 1, 1);
+  km2.observe(x, S, xp, Sp, C.row(0), D.row(0), R.row(0).col(0), z.row(0), u);
+
+  std::cout << xp.format(f) << std::endl;
+  std::cout << (Sp*Sp.transpose()).format(f) << std::endl;
 
   return 1;
 }

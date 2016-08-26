@@ -82,3 +82,37 @@ void KalmanPropagator::propagate(const M& x, const M& S, double t, M& xp, M& Sp,
   qr.compute(Mm);
   Sp = qr.matrixQR().block(0, 0, n_, n_).triangularView<Eigen::Upper>().transpose();
 }
+
+KalmanObserver::KalmanObserver(int n, int nb, int ny) : n_(n), nb_(nb), ny_(ny), Mm(n+ny, ny), qr(n+ny, ny), SR(ny, ny), Rf(ny), Sf(n), zp(ny, 1), SZ(ny, ny), L(n, ny),  LZ(n, ny)  {
+
+}
+
+void KalmanObserver::observe(const M& x, const M& S, M& xp, M& Sp, const M& C, const M& D, const M& R, const M& z, const M& u) {
+  // Output
+  zp = C*x+D*u;
+
+  // Propagate covariance
+  Rf.compute(R);
+  SR = Rf.matrixL();
+
+  Mm << (C*S).transpose(), SR.transpose();
+
+  qr.compute(Mm);
+  SZ = qr.matrixQR().block(0, 0, ny_, ny_).triangularView<Eigen::Upper>().transpose();
+
+  L = C*(S*S.transpose());
+
+  SZ.triangularView<Eigen::Lower>().solveInPlace(L);
+  SZ.triangularView<Eigen::Lower>().transpose().solveInPlace(L);
+
+  L.transposeInPlace();
+
+  xp = x + L*(z - zp);
+  LZ = L*SZ;
+
+  Sp = S;
+  for (int i=0;i<ny_;++i) {
+    Eigen::internal::llt_inplace<double, Eigen::Lower>::rankUpdate(Sp, LZ.col(i), -1);
+  }
+
+}
