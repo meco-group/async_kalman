@@ -1,18 +1,20 @@
 #include "async_kalman.hpp"
 #include <iostream>
+
 int main ( int argc , char *argv[] ) {
-  M A(2, 2);
+
+  M<2, 2> A;
   A << 1  , 0.1,
        0.2, 1.1;
-  M B(2, 1);
+  M<2, 1> B;
   B << 3,
        4;
-  M Q(2, 2);
+  M<2, 2> Q;
   Q << 2, 0.1,
       0.1, 3;
 
 
-  KalmanIntegrator ki(2);
+  KalmanIntegrator<2, 1> ki;
 
   M Ad(2, 2);
   M Bd(2, 1);
