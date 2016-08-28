@@ -96,6 +96,56 @@ private:
   Eigen::LLT< M<N, N> > Qf;
 };
 
+template <int N, int Nu, int Ny>
+class KalmanObserver {
+public:
+  KalmanObserver() {};
+
+  void observe(const M<N, 1>& x, const M<N, N>& S, M<N, 1>& xp, M<N, N>& Sp, const M<Ny, N>& C, const M<Ny, Nu>& D, const M<Ny, Ny>& R, const M<Ny, 1>& z, const M<Nu, 1>& u) {
+    // Output
+    zp = C*x+D*u;
+
+    // Propagate covariance
+    Rf.compute(R);
+    SR = Rf.matrixL();
+
+    Mm << (C*S).transpose(), SR.transpose();
+
+    qr.compute(Mm);
+    SZ = qr.matrixQR().block(0, 0, Ny, Ny).template triangularView<Eigen::Upper>().transpose();
+
+    L = C*(S*S.transpose());
+
+    SZ.template triangularView<Eigen::Lower>().solveInPlace(L);
+    SZ.template triangularView<Eigen::Lower>().transpose().solveInPlace(L);
+
+    xp = x + L.transpose()*(z - zp);
+    LZ = L.transpose()*SZ;
+
+    Sp = S;
+    for (int i=0;i<Ny;++i) {
+      Eigen::internal::llt_inplace<double, Eigen::Lower>::rankUpdate(Sp, LZ.col(i), -1);
+    }
+  }
+
+private:
+
+  M<N + Ny, Ny> Mm;
+  Eigen::HouseholderQR< M<N + Ny, Ny> > qr;
+
+
+  M<Ny, Ny> SR;
+
+  Eigen::LLT< M<Ny, Ny> > Rf;
+
+  M<Ny, 1> zp;
+  M<Ny, Ny> SZ;
+  M<Ny, N> L;
+  M<N, Ny> LZ;
+
+  Eigen::LLT< M<N, N> > Sf;
+};
+
 /**
 +
 +class KalmanObserver {

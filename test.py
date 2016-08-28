@@ -1,7 +1,7 @@
 import filterpy.common as common
 from filterpy.common import van_loan_discretization
 from pykalman.sqrt import CholeskyKalmanFilter
-from pykalman.sqrt.cholesky import _filter_predict
+from pykalman.sqrt.cholesky import _filter_predict, _filter_correct
 import numpy as np
 
 np.set_printoptions(formatter={'all':lambda x: "%0.5e" % x})
@@ -26,6 +26,8 @@ R  = np.matrix([[2, 0.1], [0.1, 2]])
 x0 = np.matrix([[1],[0.1]])
 u = 2
 
+z = np.matrix([[1],[0.2]])
+
 kf = CholeskyKalmanFilter(
     transition_matrices=Ad,
     observation_matrices=C,
@@ -44,3 +46,19 @@ kf = CholeskyKalmanFilter(
 Sp= np.matrix(Sp)
 print np.matrix(xp).T
 print Sp
+
+(xp, Sp) = _filter_correct(np.array(C), np.array(np.linalg.cholesky(R)),
+                    np.array(D*u).squeeze(), np.array(x0).squeeze(),
+                    np.array(S), np.array(z).squeeze())
+
+Sp= np.matrix(Sp)
+print np.matrix(xp).T
+print Sp*Sp.T
+
+(xp, Sp) = _filter_correct(np.array(C[0,:]), np.array(np.linalg.cholesky(R[:1,:1])),
+                    np.array(D*u).squeeze()[:-1], np.array(x0).squeeze(),
+                    np.array(S), np.array(z).squeeze()[:-1])
+
+Sp= np.matrix(Sp)
+print np.matrix(xp).T
+print Sp*Sp.T
