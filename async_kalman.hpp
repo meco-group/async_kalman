@@ -1,5 +1,6 @@
 #include <Eigen/Dense>
 #include <vector>
+#include <set>
 
 template <int Nr, int Nc>
 using M = typename Eigen::Matrix<double, Nr, Nc>;
@@ -146,46 +147,142 @@ private:
   Eigen::LLT< M<N, N> > Sf;
 };
 
-/**
-+
-+class KalmanObserver {
-+public:
-+  KalmanObserver(int n, int nb, int ny);
-+
-+  void observe(const M& x, const M& S, M& xp, M& Sp, const M& C, const M& D, const M& R, const M& z, const M& u);
-+
-+private:
-+  int n_;
-+  int nb_;
-+  int ny_;
-+
-+  M Mm;
-+  Eigen::HouseholderQR<M> qr;
-+
-+
-+  M SR;
-+
-+  Eigen::LLT<M> Rf;
-+
-+  M zp;
-+  M SZ;
-+  M L;
-+  M LZ;
-+
-+  Eigen::LLT<M> Sf;
-+};
-
-
-template <int Nx, int Ny, int Nu>
-class SimpleMeasurement : public Measurment {
-  M2<Ny, Nx> C_;
-  M2<Ny, Nu> D_;
-  M2<Ny, Ny> R_;
-
-  void get(const M1<Nx> &x, const M2<Nx, Nx>& s, M2<Ny, Nx>& C, M2<Ny, Nu>& D, M2<Ny, Ny>& R) {
-    C = C_;
-    D = D_;
-    R = R_;
-  }
+template <int N, int Nu>
+class KalmanMeasurement {
+  virtual void observe(const M<N, 1>& x, const M<N, N>& S, const M<Nu, 1>& u, M<N, 1>& xp, M<N, N>& Sp) = 0;
 };
-*/
+
+template <int N, int Nu, int Ny>
+class SimpleMeasurement : public KalmanMeasurement<N, Nu> {
+public:
+  virtual void observe(const M<N, 1>& x, const M<N, N>& S, const M<Nu, 1>& u, M<N, 1>& xp, M<N, N>& Sp) {
+    ko.observe(x, S, xp, Sp, C_, D_, R_, z_, u);
+  }
+  void set(const M<Ny, N>&C, const M<Ny, Nu> &D, const M<Ny, Ny>&R, const M<Ny, 1>&z) {
+    C_ = C;
+    D_ = D;
+    R_ = R;
+    z_ = z;
+  }
+private:
+  M<Ny, N> C_;
+  M<Ny, Nu> D_;
+  M<Ny, Ny> R_;
+  M<Ny, 1> z_;
+
+  KalmanObserver<N, Nu, Ny> ko;
+};
+
+
+class Event {
+public:
+  /// Immutable part: key
+  double t;
+
+};
+
+
+template <int N, int Nu, class Measurements>
+class KalmanEvent : public Event {
+public:
+
+
+  // Mutable part
+  mutable M<N,  N> S_cache;
+  mutable M<N,  1> x_cache;
+  mutable M<Nu, 1> u_cache;
+  mutable bool dirty;
+
+  // Immutable
+  Measurements m;
+
+  KalmanMeasurement<N, Nu> * active_measurement;
+
+};
+
+bool operator<(const Event& a, const Event& b) {
+  return a.t<b.t;
+}
+
+
+template <int N, int Nu, class Measurements>
+class EventBuffer {
+public:
+  EventBuffer(int max_size) : event_pool_(max_size), max_size_(max_size) {}
+
+  // Get available event
+  KalmanEvent<N, Nu, Measurements>* pop_event() {
+    if (pool_count < event_pool_.size()) {
+      // If pool not exhausted; return an Event from the pool
+      return &event_pool_[pool_count++];
+    } else {
+      // If pool exhausted, start recycling events from the buffer
+      KalmanEvent<N, Nu, Measurements>* ret = *buffer_.end();
+      buffer_.erase(buffer_.end());
+      return ret;
+    }
+  }
+
+  void add(KalmanEvent<N, Nu, Measurements>* e) {
+    buffer_.insert(e);
+  }
+
+  KalmanEvent<N, Nu, Measurements>* get_event(double t) {
+    auto it = buffer_.lower_bound(t);
+    return *it;
+  }
+
+private:
+  int max_size_;
+  std::vector< KalmanEvent<N, Nu, Measurements> > event_pool_;
+  std::multiset< KalmanEvent<N, Nu, Measurements>* > buffer_;
+
+  int pool_count = 0;
+
+  /**
+    ordered by key
+    key not unique?
+    fast to discard 'old' items (bottom of the queue)
+    fast to look up first element with key> some value // std::lower_bound on vector/deque
+ **/
+
+
+};
+
+template <int N, int Nu, class Measurements>
+class KalmanFilter {
+public:
+  KalmanFilter(const M<N, N>&A, const M<N, Nu>&B, const M<N, N>&Q) : buffer_(100), A_(A), B_(B), Q_(Q) {}
+  KalmanEvent<N, Nu, Measurements> * create_event(double t) {
+    auto e = buffer_.pop_event();
+    e->t = t;
+    e->dirty = true;
+    buffer_.add(e);
+    return e;
+  }
+  void reset(double t, const M<N, 1>&x, const M<N, N>&P) {
+    SP.compute(P);
+    auto e = create_event(t);
+    e->active_measurement = 0;
+    e->x_cache = x;
+    e->S_cache = SP.matrixL();
+  }
+  void input(double t, const M<Nu, 1>&u) {
+
+  }
+
+  void predict(double t, M<N, 1>& x, M<N, N>& P) {
+    auto ref = buffer_.get_event(t);
+    kp(ref->x_cache, ref->S_cache, t-ref->t, x, P, A_, B_, Q_, ref->u_cache);
+  }
+
+private:
+  EventBuffer<N, Nu, Measurements> buffer_;
+  Eigen::LLT< M<N, N> > SP;
+  KalmanPropagator<N, Nu> kp;
+
+
+  M<N, N> A_;
+  M<N, Nu> B_;
+  M<N, N> Q_;
+};

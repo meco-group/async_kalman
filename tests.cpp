@@ -73,5 +73,24 @@ int main ( int argc , char *argv[] ) {
   std::cout << xp.format(f) << std::endl;
   std::cout << (Sp*Sp.transpose()).format(f) << std::endl;
 
+  M<2, 2> P = S*S.transpose();
+
+  class Measurements {
+  public:
+    SimpleMeasurement<2, 1, 2> s;
+  };
+
+  KalmanFilter<2, 1, Measurements> kf(A, B, Q);
+  kf.reset(0.0, x, P);
+
+  auto e = kf.create_event(1.0);
+  e->active_measurement = &e->m.s;
+  e->m.s.set(C, D, R, z);
+
+  M<2, 1> x2;
+  M<2, 2> P2;
+
+  kf.predict(3, x2, P2);
+
   return 1;
 }
