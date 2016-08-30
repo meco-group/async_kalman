@@ -62,3 +62,33 @@ print Sp*Sp.T
 Sp= np.matrix(Sp)
 print np.matrix(xp).T
 print Sp*Sp.T
+
+print "KinematicKalmanFilter"
+
+A = np.matrix([[0  , 1],[0, 0]])
+B = np.matrix([[],[]])
+Q = np.matrix([[0.1]])
+
+Ad, Qd = van_loan_discretization(A, np.linalg.cholesky(Q), 0.1)
+
+C = np.matrix([[1.0,0.0]])
+D = np.matrix([[]])
+
+P  = np.matrix([[1, 0], [0,1 ]])
+R  = np.matrix([[0.1]])
+x0 = np.matrix([[0],[0]])
+
+kf = CholeskyKalmanFilter(
+    transition_matrices=Ad,
+    observation_matrices=C,
+    transition_covariance=Qd,
+    observation_covariance=R,
+    transition_offsets=np.array([0,0]),
+    observation_offsets=np.array([0]),
+    initial_state_mean=np.array(x0).squeeze(),
+    initial_state_covariance=P
+)
+
+for x,P in zip(*kf.filter(np.matrix([[2],[2],[2],[2],[2],[2],[2],[2],[2]]))):
+    print x
+    print P

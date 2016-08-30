@@ -1,6 +1,7 @@
 #include <Eigen/Dense>
 #include <vector>
-#include <set>
+#include <map>
+#include <iostream>
 
 template <int Nr, int Nc>
 using M = typename Eigen::Matrix<double, Nr, Nc>;
@@ -149,6 +150,7 @@ private:
 
 template <int N, int Nu>
 class KalmanMeasurement {
+  public:
   virtual void observe(const M<N, 1>& x, const M<N, N>& S, const M<Nu, 1>& u, M<N, 1>& xp, M<N, N>& Sp) = 0;
 };
 
@@ -174,24 +176,15 @@ private:
 };
 
 
-class Event {
-public:
-  /// Immutable part: key
-  double t;
-
-};
 
 
 template <int N, int Nu, class Measurements>
-class KalmanEvent : public Event {
+class KalmanEvent {
 public:
-
-
   // Mutable part
-  mutable M<N,  N> S_cache;
-  mutable M<N,  1> x_cache;
-  mutable M<Nu, 1> u_cache;
-  mutable bool dirty;
+  M<N,  N> S_cache;
+  M<N,  1> x_cache;
+  M<Nu, 1> u_cache;
 
   // Immutable
   Measurements m;
@@ -200,14 +193,11 @@ public:
 
 };
 
-bool operator<(const Event& a, const Event& b) {
-  return a.t<b.t;
-}
-
-
 template <int N, int Nu, class Measurements>
 class EventBuffer {
 public:
+  typedef std::multimap< double, KalmanEvent<N, Nu, Measurements>* > EventMap;
+  typedef typename EventMap::iterator EventMapIt;
   EventBuffer(int max_size) : event_pool_(max_size), max_size_(max_size) {}
 
   // Get available event
@@ -217,25 +207,34 @@ public:
       return &event_pool_[pool_count++];
     } else {
       // If pool exhausted, start recycling events from the buffer
-      KalmanEvent<N, Nu, Measurements>* ret = *buffer_.end();
-      buffer_.erase(buffer_.end());
+      EventMapIt lastit = buffer_.begin();
+      KalmanEvent<N, Nu, Measurements>* ret = lastit->second;
+      buffer_.erase(lastit);
       return ret;
     }
   }
 
-  void add(KalmanEvent<N, Nu, Measurements>* e) {
-    buffer_.insert(e);
+  EventMapIt add_event(double t, KalmanEvent<N, Nu, Measurements>* e) {
+    return buffer_.insert(std::pair<double, KalmanEvent<N, Nu, Measurements>* >(t, e));
   }
 
-  KalmanEvent<N, Nu, Measurements>* get_event(double t) {
-    auto it = buffer_.lower_bound(t);
-    return *it;
+  EventMapIt end() {
+    return buffer_.end();
+  }
+
+  KalmanEvent<N, Nu, Measurements>* get_event(double t, double& te) {
+    auto it = buffer_.upper_bound(t);
+    if (it==buffer_.begin()) return 0;
+    --it;
+    te = it->first;
+    return it->second;
   }
 
 private:
   int max_size_;
   std::vector< KalmanEvent<N, Nu, Measurements> > event_pool_;
-  std::multiset< KalmanEvent<N, Nu, Measurements>* > buffer_;
+  EventMap buffer_;
+  KalmanEvent<N, Nu, Measurements> dummy;
 
   int pool_count = 0;
 
@@ -253,27 +252,61 @@ template <int N, int Nu, class Measurements>
 class KalmanFilter {
 public:
   KalmanFilter(const M<N, N>&A, const M<N, Nu>&B, const M<N, N>&Q) : buffer_(100), A_(A), B_(B), Q_(Q) {}
-  KalmanEvent<N, Nu, Measurements> * create_event(double t) {
-    auto e = buffer_.pop_event();
-    e->t = t;
-    e->dirty = true;
-    buffer_.add(e);
-    return e;
+
+  KalmanEvent<N, Nu, Measurements>* pop_event() {
+    return buffer_.pop_event();
+  }
+  void add_event(double t, KalmanEvent<N, Nu, Measurements>* e) {
+    // Add event to the buffer
+    auto it_insert = buffer_.add_event(t, e);
+
+    // Update Kalman cache
+    typename std::multimap< double, KalmanEvent<N, Nu, Measurements>* >::iterator it_ref = it_insert;
+
+    if (it_insert->second->active_measurement) --it_ref;
+
+    // Obtain previous starting value
+    const M<N, 1>* x_ref = &it_ref->second->x_cache;
+    const M<N, N>* S_ref = &it_ref->second->S_cache;
+    M<Nu, 1> u_ref;
+    double t_ref =  it_ref->first;
+
+    for (auto it=it_insert;it!=buffer_.end();++it) {
+      if (it->second->active_measurement) {
+        // Propagate from starting value to current
+        kp.propagate(*x_ref, *S_ref, it->first-t_ref, it->second->x_cache, it->second->S_cache, A_, B_, Q_, u_ref);
+        // Measurement update
+        it->second->active_measurement->observe(it->second->x_cache, it->second->S_cache, u_ref, it->second->x_cache, it->second->S_cache);
+      }
+      // Current value becomes new starting value
+      M<N, 1>* x_ref = &it->second->x_cache;
+      M<N, N>* S_ref = &it->second->S_cache;
+      t_ref =  it->first;
+    }
+
   }
   void reset(double t, const M<N, 1>&x, const M<N, N>&P) {
     SP.compute(P);
-    auto e = create_event(t);
+    auto e = pop_event();
     e->active_measurement = 0;
     e->x_cache = x;
     e->S_cache = SP.matrixL();
+    add_event(t, e);
   }
   void input(double t, const M<Nu, 1>&u) {
 
   }
 
   void predict(double t, M<N, 1>& x, M<N, N>& P) {
-    auto ref = buffer_.get_event(t);
-    kp(ref->x_cache, ref->S_cache, t-ref->t, x, P, A_, B_, Q_, ref->u_cache);
+    double te;
+    auto ref = buffer_.get_event(t, te);
+    if (ref) {
+      kp.propagate(ref->x_cache, ref->S_cache, t-te, x, P, A_, B_, Q_, ref->u_cache);
+      P = P*P.transpose();
+    } else {
+      x.setConstant(NAN);
+      P.setConstant(NAN);
+    }
   }
 
 private:
@@ -285,4 +318,30 @@ private:
   M<N, N> A_;
   M<N, Nu> B_;
   M<N, N> Q_;
+};
+
+template <int order, class Measurements>
+class KinematicKalmanFilter : public KalmanFilter<order, 0, Measurements> {
+public:
+  static M<order, order> A() {
+    M<order, order> ret;
+    ret << M<order, 1>(), M<order, order-1>::Identity(order, order-1);
+    return ret;
+  }
+
+  static M<order, 0> B() {
+    return M<order, 0>();
+  }
+
+  static M<order, order> Q(double psd) {
+    M<order, order> ret;
+    ret(order-1, order-1) = psd;
+    return ret;
+  }
+
+  KinematicKalmanFilter(double psd) : KalmanFilter<order, 0, Measurements>(A(), B(), Q(psd) ) {
+
+  }
+
+
 };

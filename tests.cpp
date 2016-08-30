@@ -77,20 +77,77 @@ int main ( int argc , char *argv[] ) {
 
   class Measurements {
   public:
-    SimpleMeasurement<2, 1, 2> s;
+     SimpleMeasurement<2, 1, 2> s;
   };
 
   KalmanFilter<2, 1, Measurements> kf(A, B, Q);
   kf.reset(0.0, x, P);
 
-  auto e = kf.create_event(1.0);
+  auto e = kf.pop_event();
   e->active_measurement = &e->m.s;
   e->m.s.set(C, D, R, z);
+  kf.add_event(1.0, e);
 
   M<2, 1> x2;
   M<2, 2> P2;
 
-  kf.predict(3, x2, P2);
+  kf.predict(-0.5, x2, P2);
+  std::cout << x2.format(f) << std::endl;
+  std::cout << P2.format(f) << std::endl;
+  kf.predict(0.1, x2, P2);
+  std::cout << x2.format(f) << std::endl;
+  std::cout << P2.format(f) << std::endl;
+  kf.predict(1.2, x2, P2);
+  std::cout << x2.format(f) << std::endl;
+  std::cout << P2.format(f) << std::endl;
+  kf.predict(0, x2, P2);
+  std::cout << x2.format(f) << std::endl;
+  std::cout << P2.format(f) << std::endl;
+  kf.predict(1, x2, P2);
+
+  {
+    std::cout << "KinematicKalmanFilter" << std::endl;
+
+    class Measurements {
+    public:
+      SimpleMeasurement<2, 0, 1> s;
+    };
+
+    KinematicKalmanFilter<2, Measurements> kf(5);
+
+    M<2, 1> x2;
+    M<2, 2> P2;
+
+    M<2, 1> x0;
+    M<2, 2> P0 = M<2, 2>::Identity(2, 2);
+
+    kf.reset(0.0, x0, P0);
+
+    M<1, 2> C;
+    C << 1, 0;
+
+    M<1, 0> D;
+
+    M<1, 1> z;
+    z << 2;
+
+    M<1, 1> R;
+    R << 0.1;
+
+    for (int i=1;i<8;++i) {
+
+      auto e = kf.pop_event();
+      e->active_measurement = &e->m.s;
+      e->m.s.set(C, D, R, z);
+      kf.add_event(i, e);
+
+      kf.predict(i, x2, P2);
+      std::cout << x2.format(f) << std::endl;
+      std::cout << P2.format(f) << std::endl;
+    }
+
+
+  }
 
   return 1;
 }
