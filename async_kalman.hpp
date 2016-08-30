@@ -130,6 +130,33 @@ public:
     }
   }
 
+  void observe(const M<N, 1>& x, const M<N, N>& S, M<N, 1>& xp, M<N, N>& Sp, const M<Ny, N>& C, const M<Ny, Ny>& R, const M<Ny, 1>& z) {
+    // Output
+    zp = C*x;
+
+    // Propagate covariance
+    Rf.compute(R);
+    SR = Rf.matrixL();
+
+    Mm << (C*S).transpose(), SR.transpose();
+
+    qr.compute(Mm);
+    SZ = qr.matrixQR().block(0, 0, Ny, Ny).template triangularView<Eigen::Upper>().transpose();
+
+    L = C*(S*S.transpose());
+
+    SZ.template triangularView<Eigen::Lower>().solveInPlace(L);
+    SZ.template triangularView<Eigen::Lower>().transpose().solveInPlace(L);
+
+    xp = x + L.transpose()*(z - zp);
+    LZ = L.transpose()*SZ;
+
+    Sp = S;
+    for (int i=0;i<Ny;++i) {
+      Eigen::internal::llt_inplace<double, Eigen::Lower>::rankUpdate(Sp, LZ.col(i), -1);
+    }
+  }
+
 private:
 
   M<N + Ny, Ny> Mm;
@@ -253,6 +280,9 @@ class KalmanFilter {
 public:
   KalmanFilter(const M<N, N>&A, const M<N, Nu>&B, const M<N, N>&Q) : buffer_(100), A_(A), B_(B), Q_(Q) {}
 
+  KalmanFilter() : buffer_(100) {}
+  void set_dynamics(const M<N, N>&A, const M<N, Nu>&B, const M<N, N>&Q) { A_ = A; B_ = B; Q_ = Q; }
+
   KalmanEvent<N, Nu, Measurements>* pop_event() {
     return buffer_.pop_event();
   }
@@ -320,28 +350,174 @@ private:
   M<N, N> Q_;
 };
 
-template <int order, class Measurements>
-class KinematicKalmanFilter : public KalmanFilter<order, 0, Measurements> {
+template<typename T>
+constexpr T pack_add(T v) {
+  return v;
+}
+
+template<typename T, typename... Args>
+constexpr T pack_add(T first, Args... args) {
+  return first + pack_add(args...);
+}
+
+template <class Measurements, int... order>
+class KinematicKalmanFilter:  public KalmanFilter< pack_add(order...), 0, Measurements> {
 public:
-  static M<order, order> A() {
-    M<order, order> ret;
-    ret << M<order, 1>(), M<order, order-1>::Identity(order, order-1);
-    return ret;
+  KinematicKalmanFilter(const std::vector<double>& psd) : KalmanFilter<pack_add(order...), 0, Measurements>() {
+    constexpr int N = pack_add(order...);
+    std::vector<int> orders = {order...};
+
+    // Contruct A
+    M<N, N> A;
+    A.setConstant(0);
+    int offset_x = 0;
+    offset_.push_back(offset_x);
+    for (int i=0;i<orders.size();++i) {
+      int n = orders[i];
+      A.block(offset_x, offset_x, n, n) << Md::Zero(n, 1), Md::Identity(n, n-1);
+      offset_x+= orders[i];
+      offset_.push_back(offset_x);
+    }
+
+    // Contruct Q
+    M<N, N> Q;
+    Q.setConstant(0);
+    offset_x = 0;
+    for (int i=0;i<orders.size();++i) {
+      int n = orders[i];
+      Q(offset_x+n-1, offset_x+n-1) = psd[i];
+      offset_x+= orders[i];
+    }
+
+    // Kinematic model has no input
+    M<N, 0> B;
+
+    this->set_dynamics(A, B, Q);
   }
 
-  static M<order, 0> B() {
-    return M<order, 0>();
+  std::vector<int> offset_;
+
+};
+
+class OdometryGenericMeasurement  {
+public:
+  enum {OFF_X = 0, OFF_Y = 2, OFF_THETA = 4};
+  void transform_R_dR(double theta, M<2,2>& A, M<2,2>& B) {
+    double st = sin(theta);
+    double ct = cos(theta);
+    A << ct, -st, st, ct;
+    B << -st, -ct, ct, -st;
+  }
+};
+
+
+class OdometryMeasurement : public KalmanMeasurement<6, 0>, OdometryGenericMeasurement {
+public:
+  virtual void observe(const M<6, 1>& x, const M<6, 6>& S, const M<0, 1>& u, M<6, 1>& xp, M<6, 6>& Sp) {
+    M<2, 2> R, dR;
+
+    transform_R_dR(x(OFF_THETA), R, dR);
+
+    M<2, 1> v;
+    v << x(OFF_X+1), x(OFF_Y+1);
+
+    M<3, 6> H;
+    H.setConstant(0);
+    H(2, OFF_THETA+1) = 1;
+    H.block(0, OFF_X+1, 2, 1) = R.transpose().block(0, 0, 2, 1);
+    H.block(0, OFF_Y+1, 2, 1) = R.transpose().block(0, 1, 2, 1);
+    H.block(0, OFF_THETA, 2, 1) = dR*v;
+
+    M<2, 1> h = R.transpose()*v;
+    M<3, 1> r;
+    r << h-H.block(0, 0, 2, 6)*x, 0;
+
+    ko.observe(x, S, xp, Sp, H, Sigma, V-r);
+  }
+  void set(double V_X, double V_Y, double omega, double sigma_X, double sigma_Y, double sigma_omega) {
+    V << V_X, V_Y, omega;
+    Sigma << sigma_X, 0, 0,   0, sigma_Y, 0,  0, 0, sigma_omega;
   }
 
-  static M<order, order> Q(double psd) {
-    M<order, order> ret;
-    ret(order-1, order-1) = psd;
-    return ret;
+
+private:
+  M<3, 1> V;
+  M<3, 3> Sigma;
+
+  KalmanObserver<6, 0, 3> ko;
+};
+
+template<int Nm>
+class markerMeasurement : public KalmanMeasurement<6, 0>, OdometryGenericMeasurement {
+public:
+  virtual void observe(const M<6, 1>& x, const M<6, 6>& S, const M<0, 1>& u, M<6, 1>& xp, M<6, 6>& Sp) {
+    M<2, 2> R, dR;
+
+    transform_R_dR(x(OFF_THETA), R, dR);
+    M<2, 1> p;
+    p << x(OFF_X), x(OFF_Y);
+    M<2, Nm> pr = p*M<1, Nm>::Ones(1, Nm);
+
+    M<2, Nm> m = pattern_meas_.transpose()  - (R*pattern_ref_.transpose() + pr);
+
+    M<2*Nm, 6> H;
+    H.setConstant(0);
+
+    for (int i=0;i<Nm;++i) {
+      H.block(2*i, OFF_THETA+1, 2, 1) = dR*pattern_ref_.block(0, i, 1, 2).transpose();
+      H(2*i,   OFF_X) = 1;
+      H(2*i+1, OFF_Y) = 1;
+    }
+
+    // Eigen is Column major
+    M <2*Nm, 1> z = Eigen::Map< M<2*Nm, 1> > (m.data(), 2*Nm) + H*x;
+    M <2*Nm, 2*Nm> Rm = M<2*Nm, 2*Nm>::Identity(2*Nm, 2*Nm)*sigma_;
+
+    ko.observe(x, S, xp, Sp, H, Rm, z);
+  }
+  void set(const M<Nm, 2>& pattern_meas, const M<Nm, 2>& pattern_ref, double sigma) {
+    pattern_meas_ = pattern_meas;
+    pattern_ref_ = pattern_ref;
+    sigma_ = sigma;
   }
 
-  KinematicKalmanFilter(double psd) : KalmanFilter<order, 0, Measurements>(A(), B(), Q(psd) ) {
+private:
+  M<Nm,2> pattern_meas_;
+  M<Nm,2> pattern_ref_;
+  double sigma_;
+
+  KalmanObserver<6, 0, 2*Nm> ko;
+};
+
+template<int N>
+class OdometryMeasurements {
+  public:
+  OdometryMeasurement odo;
+  markerMeasurement<N> markers;
+};
+
+template<int Nm>
+class OdometryFilter : public KinematicKalmanFilter<OdometryMeasurements<Nm>, 2, 2, 2> {
+  public:
+  OdometryFilter(double psd_x, double psd_y, double psd_theta) : KinematicKalmanFilter<OdometryMeasurements<Nm>, 2, 2, 2>({psd_x, psd_y, psd_theta}) {
 
   }
 
+  void unknown(double t, double sigma=1e6) {
+    this->reset(t, M<6,1>::Zero(6, 1), sigma*M<6,6>::Identity(6, 6));
+  }
 
+  void observe_odo(double t, double V_X, double V_Y, double omega, double sigma_X, double sigma_Y, double sigma_omega) {
+    auto e = this->pop_event();
+    e->active_measurement = &e->m.odo;
+    e->m.odo.set(V_X, V_Y, omega, sigma_X, sigma_Y, sigma_omega);
+    this->add_event(t, e);
+  }
+
+  void observe_markers(double t, const M<Nm,2>& pattern_meas, const M<Nm,2>& pattern_ref, double sigma) {
+    auto e = this->pop_event();
+    e->active_measurement = &e->m.markers;
+    e->m.markers.set(pattern_meas, pattern_ref, sigma);
+    this->add_event(t, e);
+  }
 };

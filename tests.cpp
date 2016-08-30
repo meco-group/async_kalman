@@ -113,7 +113,7 @@ int main ( int argc , char *argv[] ) {
       SimpleMeasurement<2, 0, 1> s;
     };
 
-    KinematicKalmanFilter<2, Measurements> kf(5);
+    KinematicKalmanFilter<Measurements, 2> kf({5});
 
     M<2, 1> x2;
     M<2, 2> P2;
@@ -141,11 +141,33 @@ int main ( int argc , char *argv[] ) {
       e->m.s.set(C, D, R, z);
       kf.add_event(i, e);
 
-      kf.predict(i, x2, P2);
+      kf.predict(10, x2, P2);
       std::cout << x2.format(f) << std::endl;
       std::cout << P2.format(f) << std::endl;
     }
 
+
+  }
+
+  std::cout << "OdometryFilter" << std::endl;
+
+  {
+
+    M<6, 1> x2;
+    M<6, 6> P2;
+
+    KinematicKalmanFilter<Measurements, 2, 3> kf2({5,3});
+
+    OdometryFilter<3> of(1, 1, 0.1);
+
+    of.unknown(0.0);
+
+    of.observe_odo(4, 5,0,0, 1,2,0.1);
+
+    of.predict(5, x2, P2);
+
+    std::cout << x2.format(f) << std::endl;
+    std::cout << P2.format(f) << std::endl;
 
   }
 
