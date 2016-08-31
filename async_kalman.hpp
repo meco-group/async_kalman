@@ -2,6 +2,8 @@
 #include <vector>
 #include <map>
 #include <iostream>
+#include <thread>
+#include <condition_variable>
 
 template <int Nr, int Nc>
 using M = typename Eigen::Matrix<double, Nr, Nc>;
@@ -249,12 +251,14 @@ public:
     return buffer_.end();
   }
 
-  KalmanEvent<N, Nu, Measurements>* get_event(double t, double& te) {
+  EventMapIt begin() {
+    return buffer_.end();
+  }
+
+  typename EventMap::iterator get_event(double t) {
     auto it = buffer_.upper_bound(t);
-    if (it==buffer_.begin()) return 0;
-    --it;
-    te = it->first;
-    return it->second;
+    if (it!=buffer_.begin()) --it;
+    return it;
   }
 
 private:
@@ -275,43 +279,71 @@ private:
 
 };
 
+
 template <int N, int Nu, class Measurements>
 class KalmanFilter {
 public:
-  KalmanFilter(const M<N, N>&A, const M<N, Nu>&B, const M<N, N>&Q) : buffer_(100), A_(A), B_(B), Q_(Q) {}
+  using EventPtr = KalmanEvent<N, Nu, Measurements>*;
+  using EventIterator = typename std::multimap< double, EventPtr >::iterator;
+  KalmanFilter(const M<N, N>&A, const M<N, Nu>&B, const M<N, N>&Q) : buffer_(100), A_(A), B_(B), Q_(Q), tworker(&KalmanFilter::work_process, this) {
+    it_work_done = buffer_.begin();
+    it_work_todo = buffer_.begin();
+  }
 
-  KalmanFilter() : buffer_(100) {}
+  KalmanFilter() : buffer_(100), tworker(&KalmanFilter::work_process, this) {
+    it_work_done = buffer_.begin();
+    it_work_todo = buffer_.begin();
+  }
   void set_dynamics(const M<N, N>&A, const M<N, Nu>&B, const M<N, N>&Q) { A_ = A; B_ = B; Q_ = Q; }
 
-  KalmanEvent<N, Nu, Measurements>* pop_event() {
+  EventPtr pop_event() {
     return buffer_.pop_event();
   }
-  void add_event(double t, KalmanEvent<N, Nu, Measurements>* e) {
+  void add_event(double t, EventPtr e) {
     // Add event to the buffer
-    auto it_insert = buffer_.add_event(t, e);
+    EventIterator it_insert = buffer_.add_event(t, e);
 
-    // Update Kalman cache
-    typename std::multimap< double, KalmanEvent<N, Nu, Measurements>* >::iterator it_ref = it_insert;
+    std::lock_guard<std::mutex> lock(m_it_worker_todo);
+    it_work_todo = it_insert;
 
-    if (it_insert->second->active_measurement) --it_ref;
+  }
 
-    // Obtain previous starting value
-    const M<N, 1>* x_ref = &it_ref->second->x_cache;
-    const M<N, N>* S_ref = &it_ref->second->S_cache;
-    M<Nu, 1> u_ref;
-    double t_ref =  it_ref->first;
-
-    for (auto it=it_insert;it!=buffer_.end();++it) {
-      if (it->second->active_measurement) {
-        // Propagate from starting value to current
-        kp.propagate(*x_ref, *S_ref, it->first-t_ref, it->second->x_cache, it->second->S_cache, A_, B_, Q_, u_ref);
-        // Measurement update
-        it->second->active_measurement->observe(it->second->x_cache, it->second->S_cache, u_ref, it->second->x_cache, it->second->S_cache);
+  void work_process() {
+    while (true) {
+      EventIterator it_current;
+      EventIterator it_ref;
+      { // Obtain the current chunk of work
+        std::lock_guard<std::mutex> lock(m_it_worker_todo);
+        it_current = it_work_todo;
+        it_work_todo++;
       }
-      // Current value becomes new starting value
-      M<N, 1>* x_ref = &it->second->x_cache;
-      M<N, N>* S_ref = &it->second->S_cache;
-      t_ref =  it->first;
+      it_ref = it_current;
+      {
+        std::unique_lock<std::mutex> lock(m_eventmod);
+
+        // Use the previous as reference
+        if (it_current->second->active_measurement) --it_ref;
+
+        // Obtain previous starting value
+        const M<N, 1>* x_ref = &it_ref->second->x_cache;
+        const M<N, N>* S_ref = &it_ref->second->S_cache;
+        M<Nu, 1> u_ref;
+        double t_ref =  it_ref->first;
+
+        // Propagate from starting value to current
+        kp.propagate(*x_ref, *S_ref, it_current->first-t_ref, it_current->second->x_cache, it_current->second->S_cache, A_, B_, Q_, u_ref);
+        // Measurement update
+        it_current->second->active_measurement->observe(it_current->second->x_cache, it_current->second->S_cache, u_ref, it_current->second->x_cache, it_current->second->S_cache);
+      }
+      { // Make public that the current chunk of work is finished
+        std::unique_lock<std::mutex> lock(m_it_worker_done);
+        it_work_done = it_current;
+      }
+      { // Announce this
+        std::unique_lock<std::mutex> lock(m_worker);
+        cv_worker.notify_all();
+      }
+
     }
 
   }
@@ -327,15 +359,30 @@ public:
 
   }
 
+  static bool it_order()
+
   void predict(double t, M<N, 1>& x, M<N, N>& P) {
-    double te;
-    auto ref = buffer_.get_event(t, te);
-    if (ref) {
-      kp.propagate(ref->x_cache, ref->S_cache, t-te, x, P, A_, B_, Q_, ref->u_cache);
-      P = P*P.transpose();
-    } else {
+    // Get iterator to event
+    EventIterator it_ref = buffer_.get_event(t);
+
+    { // Wait until the worker thread got past
+      std::unique_lock<std::mutex> lk(m_worker);
+      // Wait if it_work_done<it_ref
+      if (std::distance(it_work_done, it_ref)>0) {
+        cv_worker.wait(lk, [&]{return std::distance(it_ref, it_work_done)>0;});
+      }
+    }
+
+    if (it_ref==buffer_.begin()) {
       x.setConstant(NAN);
       P.setConstant(NAN);
+    } else {
+      {
+        std::unique_lock<std::mutex> locka(m_eventmod);
+        std::unique_lock<std::mutex> lockb(m_kp);
+        kp.propagate(it_ref->second->x_cache, it_ref->second->S_cache, t-it_ref->first, x, P, A_, B_, Q_, it_ref->second->u_cache);
+      }
+      P = P*P.transpose();
     }
   }
 
@@ -348,6 +395,20 @@ private:
   M<N, N> A_;
   M<N, Nu> B_;
   M<N, N> Q_;
+
+  std::thread tworker;
+  EventIterator it_work_todo; // iterators are safe against map modifications    http://kera.name/articles/2011/06/iterator-invalidation-rules-c0x/
+  EventIterator it_work_done;
+
+  std::mutex m_it_worker_todo;
+  std::mutex m_it_worker_done;
+
+  std::condition_variable cv_worker;
+  std::mutex m_worker;
+
+  std::mutex m_kp;
+
+  std::mutex m_eventmod;
 };
 
 template<typename T>

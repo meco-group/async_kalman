@@ -22,6 +22,6 @@ set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} -std=c++11)
 add_library(async_kalman SHARED async_kalman.cpp async_kalman.hpp)
 target_link_libraries (async_kalman ${SLICOT_LIB})
 
-target_link_libraries (tests async_kalman)
-target_link_libraries (demo async_kalman)
+target_link_libraries (tests async_kalman pthread)
+target_link_libraries (demo async_kalman pthread)
 target_link_libraries (main pthread)
