@@ -160,14 +160,44 @@ int main ( int argc , char *argv[] ) {
 
     OdometryFilter<3> of(1, 1, 0.1);
 
+    M<3, 2> Mref;
+    Mref << 0.1, 0.1, 0.1, -0.1, 0, 0;
+
+
     of.unknown(0.0);
+    of.predict(0, x2, P2);
+    std::cout << x2.format(f) << std::endl;
+    std::cout << P2.format(f) << std::endl;
+
+    of.predict(5, x2, P2);
+    std::cout << x2.format(f) << std::endl;
+    std::cout << P2.format(f) << std::endl;
+
+    M<3, 2> Mmeas;
+    Mmeas << 0.6, 1.1, 0.6, 0.9, 0.5, 1;
+    of.observe_markers(1.0, Mmeas, Mref, 0.1);
+    of.predict(5, x2, P2);
+    std::cout << x2.format(f) << std::endl;
+    std::cout << P2.format(f) << std::endl;
+
+    Mmeas << 0.7, 1.1, 0.7, 0.9, 0.6, 1;
+    of.observe_markers(2.0, Mmeas, Mref, 0.1);
+    of.predict(5, x2, P2);
+    std::cout << x2.format(f) << std::endl;
+    std::cout << P2.format(f) << std::endl;
+
+    Mmeas << 0.8, 1.1, 0.8, 0.9, 0.7, 1;
+    of.observe_markers(3.0, Mmeas, Mref, 0.1);
+    of.predict(5, x2, P2);
+    std::cout << x2.format(f) << std::endl;
+    std::cout << P2.format(f) << std::endl;
 
     of.observe_odo(4, 5,0,0, 1,2,0.1);
 
     of.predict(5, x2, P2);
-
     std::cout << x2.format(f) << std::endl;
     std::cout << P2.format(f) << std::endl;
+
 
   }
 
