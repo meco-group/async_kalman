@@ -91,6 +91,8 @@ int main ( int argc , char *argv[] ) {
   M<2, 1> x2;
   M<2, 2> P2;
 
+  std::cout << "No more validated tests" << std::endl;
+
   kf.predict(-0.5, x2, P2);
   std::cout << x2.format(f) << std::endl;
   std::cout << P2.format(f) << std::endl;

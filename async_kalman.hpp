@@ -1,7 +1,30 @@
+/*
+ *    This file is part of async_kalman.
+ *
+ *    async_kalman -- an synchronous kalman filter implementation
+ *    Copyright (C) 2016 Joris Gillis,
+ *                            K.U. Leuven. All rights reserved.
+ *
+ *    async_kalman is free software; you can redistribute it and/or
+ *    modify it under the terms of the GNU Lesser General Public
+ *    License as published by the Free Software Foundation; either
+ *    version 3 of the License, or (at your option) any later version.
+ *
+ *    async_kalman is distributed in the hope that it will be useful,
+ *    but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *    Lesser General Public License for more details.
+ *
+ *    You should have received a copy of the GNU Lesser General Public
+ *    License along with async_kalman; if not, write to the Free Software
+ *    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ *
+ */
 #include <Eigen/Dense>
 #include <vector>
 #include <map>
 #include <iostream>
+#include <assert.h>
 
 template <int Nr, int Nc>
 using M = typename Eigen::Matrix<double, Nr, Nc>;
@@ -249,6 +272,10 @@ public:
     return buffer_.end();
   }
 
+  std::pair<EventMapIt, EventMapIt> equal_range(double t) {
+    return buffer_.equal_range(t);
+  }
+
   KalmanEvent<N, Nu, Measurements>* get_event(double t, double& te) {
     auto it = buffer_.upper_bound(t);
     if (it==buffer_.begin()) return 0;
@@ -278,9 +305,12 @@ private:
 template <int N, int Nu, class Measurements>
 class KalmanFilter {
 public:
-  KalmanFilter(const M<N, N>&A, const M<N, Nu>&B, const M<N, N>&Q) : buffer_(100), A_(A), B_(B), Q_(Q) {}
+  using EventMapIt = typename std::multimap< double, KalmanEvent<N, Nu, Measurements>* >::iterator;
+  KalmanFilter(const M<N, N>&A, const M<N, Nu>&B, const M<N, N>&Q) : buffer_(100), A_(A), B_(B), Q_(Q) {
+    work_todo = buffer_.end();
+  }
 
-  KalmanFilter() : buffer_(100) {}
+  KalmanFilter() : buffer_(100) { work_todo = buffer_.end(); }
   void set_dynamics(const M<N, N>&A, const M<N, Nu>&B, const M<N, N>&Q) { A_ = A; B_ = B; Q_ = Q; }
 
   KalmanEvent<N, Nu, Measurements>* pop_event() {
@@ -288,10 +318,30 @@ public:
   }
   void add_event(double t, KalmanEvent<N, Nu, Measurements>* e) {
     // Add event to the buffer
-    auto it_insert = buffer_.add_event(t, e);
+    EventMapIt it_insert = buffer_.add_event(t, e);
+    work_todo = it_min(work_todo, it_insert);
+  }
 
+  EventMapIt it_min(const EventMapIt& a, const EventMapIt& b) {
+    if (a==buffer_.end()) return b;
+    if (b==buffer_.end()) return a;
+    if (a->first < b->first) return a;
+    if (b->first < a->first) return b;
+
+    // The following happens in multiset
+    std::pair<EventMapIt, EventMapIt> ret = buffer_.equal_range(a->first);
+    for (EventMapIt it=ret.first; it!=ret.second; ++it) {
+      if (it==a || it==b) return it;
+    }
+    assert(false);
+  }
+
+
+  void update() {
+    if (work_todo==buffer_.end()) return;
     // Update Kalman cache
-    typename std::multimap< double, KalmanEvent<N, Nu, Measurements>* >::iterator it_ref = it_insert;
+    EventMapIt it_insert = work_todo;
+    EventMapIt it_ref = it_insert;
 
     if (it_insert->second->active_measurement) --it_ref;
 
@@ -313,8 +363,10 @@ public:
       M<N, N>* S_ref = &it->second->S_cache;
       t_ref =  it->first;
     }
-
+    // Nothing to do
+    work_todo = buffer_.end();
   }
+
   void reset(double t, const M<N, 1>&x, const M<N, N>&P) {
     SP.compute(P);
     auto e = pop_event();
@@ -328,6 +380,7 @@ public:
   }
 
   void predict(double t, M<N, 1>& x, M<N, N>& P) {
+    update();
     double te;
     auto ref = buffer_.get_event(t, te);
     if (ref) {
@@ -348,6 +401,9 @@ private:
   M<N, N> A_;
   M<N, Nu> B_;
   M<N, N> Q_;
+
+  EventMapIt work_todo;
+
 };
 
 template<typename T>
