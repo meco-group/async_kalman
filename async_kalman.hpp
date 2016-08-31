@@ -464,7 +464,7 @@ public:
     H.setConstant(0);
 
     for (int i=0;i<Nm;++i) {
-      H.block(2*i, OFF_THETA+1, 2, 1) = dR*pattern_ref_.block(i, 0, 1, 2).transpose();
+      H.block(2*i, OFF_THETA, 2, 1) = dR*pattern_ref_.block(i, 0, 1, 2).transpose();
       H(2*i,   OFF_X) = 1;
       H(2*i+1, OFF_Y) = 1;
     }
