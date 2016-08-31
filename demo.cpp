@@ -1,4 +1,4 @@
-#include "kalman_ourbot.hpp"
+#include "kalman_odometry.hpp"
 #include <iostream>
 #include <iomanip>
 
@@ -21,10 +21,10 @@ void transform_R_dR(double theta, M<2,2>& A, M<2,2>& B) {
 int main ( int argc , char *argv[] ) {
 
   std::cout << std::scientific;
-  
   Eigen::IOFormat fm(5, Eigen::DontAlignCols, " ", "\n", "[", "]", "[", "]");
 
   OdometryFilter<3> of(1, 1, 0.1);
+
   of.unknown(-1);
 
   M<3, 2> Mref;
@@ -52,8 +52,8 @@ int main ( int argc , char *argv[] ) {
     std::cout << Pp.format(fm) << std::endl;
     t+= 0.01;
 
+
     if (t>=2) break;
   }
 
-  return 1;
 }
