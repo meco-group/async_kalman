@@ -1,4 +1,4 @@
-#include "async_kalman.hpp"
+#include "kalman_odometry.hpp"
 #include <iostream>
 #include <iomanip>
 int main ( int argc , char *argv[] ) {
@@ -75,16 +75,16 @@ int main ( int argc , char *argv[] ) {
 
   M<2, 2> P = S*S.transpose();
 
-  class Measurements {
+  class Observations {
   public:
-     SimpleMeasurement<2, 1, 2> s;
+     SimpleObservation<2, 1, 2> s;
   };
 
-  KalmanFilter<2, 1, Measurements> kf(A, B, Q);
+  KalmanFilter<2, 1, Observations> kf(A, B, Q);
   kf.reset(0.0, x, P);
 
   auto e = kf.pop_event();
-  e->active_measurement = &e->m.s;
+  e->active_observation = &e->m.s;
   e->m.s.set(C, D, R, z);
   kf.add_event(1.0, e);
 
@@ -110,12 +110,12 @@ int main ( int argc , char *argv[] ) {
   {
     std::cout << "KinematicKalmanFilter" << std::endl;
 
-    class Measurements {
+    class Observations {
     public:
-      SimpleMeasurement<2, 0, 1> s;
+      SimpleObservation<2, 0, 1> s;
     };
 
-    KinematicKalmanFilter<Measurements, 2> kf({5});
+    KinematicKalmanFilter<Observations, 2> kf({5});
 
     M<2, 1> x2;
     M<2, 2> P2;
@@ -139,7 +139,7 @@ int main ( int argc , char *argv[] ) {
     for (int i=1;i<8;++i) {
 
       auto e = kf.pop_event();
-      e->active_measurement = &e->m.s;
+      e->active_observation = &e->m.s;
       e->m.s.set(C, D, R, z);
       kf.add_event(i, e);
 
@@ -158,7 +158,7 @@ int main ( int argc , char *argv[] ) {
     M<6, 1> x2;
     M<6, 6> P2;
 
-    KinematicKalmanFilter<Measurements, 2, 3> kf2({5,3});
+    KinematicKalmanFilter<Observations, 2, 3> kf2({5,3});
 
     OdometryFilter<3> of(1, 1, 0.1);
 
