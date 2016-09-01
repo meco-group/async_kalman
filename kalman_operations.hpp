@@ -106,6 +106,12 @@ public:
   void propagate(const M<N, 1>& x, const M<N, N>& S, double t,
                  M<N, 1>& xp, M<N, N>& Sp,
                  const M<N, N>& A, const M<N, Nu>& B, const M<N, N>& Q, const M<Nu, 1>& u) {
+    assert(t>=0);
+    if (t==0) {
+      xp << x;
+      Sp << S;
+      return;
+    }
     // Discretize system
     ki.integrate(A, B, Q, t, Ad, Bd, Qd);
 
