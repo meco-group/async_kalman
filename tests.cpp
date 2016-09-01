@@ -91,12 +91,18 @@ int main ( int argc , char *argv[] ) {
   M<2, 1> x2;
   M<2, 2> P2;
 
-  std::cout << "No more validated tests" << std::endl;
+  std::cout << "KalmanFilter" << std::endl;
 
   kf.predict(-0.5, x2, P2);
   std::cout << x2.format(f) << std::endl;
   std::cout << P2.format(f) << std::endl;
   kf.predict(0.1, x2, P2);
+  std::cout << x2.format(f) << std::endl;
+  std::cout << P2.format(f) << std::endl;
+  kf.predict(0.2, x2, P2);
+  std::cout << x2.format(f) << std::endl;
+  std::cout << P2.format(f) << std::endl;
+  kf.predict(1.0, x2, P2);
   std::cout << x2.format(f) << std::endl;
   std::cout << P2.format(f) << std::endl;
   kf.predict(1.2, x2, P2);
@@ -105,8 +111,53 @@ int main ( int argc , char *argv[] ) {
   kf.predict(0, x2, P2);
   std::cout << x2.format(f) << std::endl;
   std::cout << P2.format(f) << std::endl;
-  kf.predict(1, x2, P2);
 
+  std::cout << "In order" << std::endl;
+  {
+    auto e = kf.pop_event();
+    e->active_observation = &e->m.s;
+    e->m.s.set(C, D, R, z*3);
+    kf.add_event(2.0, e);
+  }
+
+  kf.predict(1.2, x2, P2);
+  std::cout << x2.format(f) << std::endl;
+  std::cout << P2.format(f) << std::endl;
+
+  kf.predict(2.0, x2, P2);
+  std::cout << x2.format(f) << std::endl;
+  std::cout << P2.format(f) << std::endl;
+
+  kf.predict(2.2, x2, P2);
+  std::cout << x2.format(f) << std::endl;
+  std::cout << P2.format(f) << std::endl;
+
+  std::cout << "Out of order" << std::endl;
+
+  {
+    auto e = kf.pop_event();
+    e->active_observation = &e->m.s;
+    e->m.s.set(C, D, R, z*2);
+    kf.add_event(0.3, e);
+  }
+
+  kf.predict(0.3, x2, P2);
+  std::cout << x2.format(f) << std::endl;
+  std::cout << P2.format(f) << std::endl;
+
+  kf.predict(0.9, x2, P2);
+  std::cout << x2.format(f) << std::endl;
+  std::cout << P2.format(f) << std::endl;
+
+  kf.predict(1.0, x2, P2);
+  std::cout << x2.format(f) << std::endl;
+  std::cout << P2.format(f) << std::endl;
+
+  kf.predict(1.2, x2, P2);
+  std::cout << x2.format(f) << std::endl;
+  std::cout << P2.format(f) << std::endl;
+
+/**
   {
     std::cout << "KinematicKalmanFilter" << std::endl;
 
@@ -150,6 +201,8 @@ int main ( int argc , char *argv[] ) {
 
 
   }
+  */
+  /*
 
   std::cout << "OdometryFilter" << std::endl;
 
@@ -202,6 +255,6 @@ int main ( int argc , char *argv[] ) {
 
 
   }
-
+*/
   return 1;
 }

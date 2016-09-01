@@ -63,6 +63,141 @@ Sp= np.matrix(Sp)
 print np.matrix(xp).T
 print Sp*Sp.T
 
+print "KalmanFilter"
+
+print np.zeros((2,1))*np.nan
+print np.zeros((2,2))*np.nan
+
+# t = 0.1
+out = kf.filter_update(np.array(x0).squeeze(), np.array(S*S.T), transition_offset=np.array([0,0]).T)
+print np.matrix(out[0]).T
+print out[1].squeeze()
+
+# t = 0.2
+X0 = np.array(x0).squeeze()
+P0 = np.array(S*S.T)
+for i in range(2):
+    out = kf.filter_update(X0, P0,transition_offset=np.array([0,0]).T)
+    X0 = out[0]
+    P0 = out[1].squeeze()
+
+print np.matrix(out[0]).T
+print out[1].squeeze()
+
+# t = 1.0
+X0 = np.array(x0).squeeze()
+P0 = np.array(S*S.T)
+
+for i in range(9):
+    out = kf.filter_update(X0, P0, transition_offset=np.array([0,0]).T)
+    X0 = out[0]
+    P0 = out[1].squeeze()
+out = kf.filter_update(X0, P0, np.array(z).squeeze(), transition_offset=np.array([0,0]).T, observation_offset=np.array([0,0]).T)
+X0 = out[0]
+P0 = out[1].squeeze()
+print np.matrix(out[0]).T
+print out[1].squeeze()
+
+# t = 1.2
+X0 = np.array(x0).squeeze()
+P0 = np.array(S*S.T)
+
+for i in range(9):
+    out = kf.filter_update(X0, P0, transition_offset=np.array([0,0]).T)
+    X0 = out[0]
+    P0 = out[1].squeeze()
+
+out = kf.filter_update(X0, P0, np.array(z).squeeze(), transition_offset=np.array([0,0]).T, observation_offset=np.array([0,0]).T)
+X0 = out[0]
+P0 = out[1].squeeze()
+
+out = kf.filter_update(X0, P0,transition_offset=np.array([0,0]).T)
+X0 = out[0]
+P0 = out[1].squeeze()
+
+out = kf.filter_update(X0, P0,transition_offset=np.array([0,0]).T)
+print np.matrix(out[0]).T
+print out[1].squeeze()
+
+# t = 0
+print x0
+print S*S.T
+
+print "In order"
+X0 = np.array(x0).squeeze()
+P0 = np.array(S*S.T)
+
+for i in range(9):
+    out = kf.filter_update(X0, P0, transition_offset=np.array([0,0]).T)
+    X0 = out[0]
+    P0 = out[1].squeeze()
+
+out = kf.filter_update(X0, P0, np.array(z).squeeze(), transition_offset=np.array([0,0]).T, observation_offset=np.array([0,0]).T)
+X0 = out[0]
+P0 = out[1].squeeze()
+
+for i in range(2):
+    out = kf.filter_update(X0, P0, transition_offset=np.array([0,0]).T)
+    X0 = out[0]
+    P0 = out[1].squeeze()
+print np.matrix(out[0]).T
+print out[1].squeeze()
+
+for i in range(7):
+    out = kf.filter_update(X0, P0, transition_offset=np.array([0,0]).T)
+    X0 = out[0]
+    P0 = out[1].squeeze()
+
+out = kf.filter_update(X0, P0, np.array(3*z).squeeze(), transition_offset=np.array([0,0]).T, observation_offset=np.array([0,0]).T)
+X0 = out[0]
+P0 = out[1].squeeze()
+print np.matrix(out[0]).T
+print out[1].squeeze()
+
+for i in range(2):
+    out = kf.filter_update(X0, P0, transition_offset=np.array([0,0]).T)
+    X0 = out[0]
+    P0 = out[1].squeeze()
+print np.matrix(out[0]).T
+print out[1].squeeze()
+
+print "Out of order"
+X0 = np.array(x0).squeeze()
+P0 = np.array(S*S.T)
+
+for i in range(2):
+    out = kf.filter_update(X0, P0, transition_offset=np.array([0,0]).T)
+    X0 = out[0]
+    P0 = out[1].squeeze()
+
+out = kf.filter_update(X0, P0, np.array(2*z).squeeze(), transition_offset=np.array([0,0]).T, observation_offset=np.array([0,0]).T)
+X0 = out[0]
+P0 = out[1].squeeze()
+print np.matrix(out[0]).T
+print out[1].squeeze()
+
+for i in range(6):
+    out = kf.filter_update(X0, P0, transition_offset=np.array([0,0]).T)
+    X0 = out[0]
+    P0 = out[1].squeeze()
+
+print np.matrix(out[0]).T
+print out[1].squeeze()
+
+out = kf.filter_update(X0, P0, np.array(z).squeeze(), transition_offset=np.array([0,0]).T, observation_offset=np.array([0,0]).T)
+X0 = out[0]
+P0 = out[1].squeeze()
+print np.matrix(out[0]).T
+print out[1].squeeze()
+
+out = kf.filter_update(X0, P0,transition_offset=np.array([0,0]).T)
+X0 = out[0]
+P0 = out[1].squeeze()
+
+out = kf.filter_update(X0, P0,transition_offset=np.array([0,0]).T)
+print np.matrix(out[0]).T
+print out[1].squeeze()
+"""
 print "KinematicKalmanFilter"
 
 A = np.matrix([[0  , 1],[0, 0]])
@@ -92,3 +227,4 @@ kf = CholeskyKalmanFilter(
 for x,P in zip(*kf.filter(np.matrix([[2],[2],[2],[2],[2],[2],[2],[2],[2]]))):
     print x
     print P
+"""
