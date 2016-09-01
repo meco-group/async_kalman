@@ -57,7 +57,8 @@ void markerObservation<Nm>::set(const M<Nm, 2>& pattern_meas, const M<Nm, 2>& pa
 }
 
 template<int Nm>
-OdometryFilter<Nm>::OdometryFilter(double psd_x, double psd_y, double psd_theta) : KinematicKalmanFilter<OdometryObservations<Nm>, 2, 2, 2>({psd_x, psd_y, psd_theta}) {
+OdometryFilter<Nm>::OdometryFilter(double psd_x, double psd_y, double psd_theta, int buffer):
+  KinematicKalmanFilter<OdometryObservations<Nm>, 2, 2, 2>({psd_x, psd_y, psd_theta}, buffer) {
 
 }
 

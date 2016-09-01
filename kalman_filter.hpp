@@ -136,12 +136,9 @@ template <int N, int Nu, class Measurements>
 class KalmanFilter {
 public:
   using EventMapIt = typename std::multimap< double, KalmanEvent<N, Nu, Measurements>* >::iterator;
-  KalmanFilter(const M<N, N>&A, const M<N, Nu>&B, const M<N, N>&Q) : buffer_(100), A_(A), B_(B), Q_(Q) {
+  KalmanFilter(const M<N, N>&A, const M<N, Nu>&B, const M<N, N>&Q, int buffer=100) : buffer_(buffer), A_(A), B_(B), Q_(Q) {
     work_todo = buffer_.end();
   }
-
-  KalmanFilter() : buffer_(100) { work_todo = buffer_.end(); }
-  void set_dynamics(const M<N, N>&A, const M<N, Nu>&B, const M<N, N>&Q) { A_ = A; B_ = B; Q_ = Q; }
 
   KalmanEvent<N, Nu, Measurements>* pop_event() {
     return buffer_.pop_event();

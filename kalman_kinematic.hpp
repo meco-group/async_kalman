@@ -52,43 +52,48 @@ constexpr T pack_add(T first, Args... args) {
 *    Such system has block-diaginal covariance unless the measurements mix several coordinates.
 */
 
+template <int N>
+M<N, N> KinematicA(const std::vector<int>& orders) {
+
+  M<N, N> A;
+  A.setConstant(0);
+  int offset_x = 0;
+  for (int i=0;i<orders.size();++i) {
+    int n = orders[i];
+    A.block(offset_x, offset_x, n, n) << Md::Zero(n, 1), Md::Identity(n, n-1);
+    offset_x+= orders[i];
+  }
+  return A;
+}
+
+template <int N>
+M<N, 0> KinematicB(const std::vector<int>& orders) {
+  return M<N, 0>();
+}
+
+template <int N>
+M<N, N> KinematicQ(const std::vector<int>& orders, const std::vector<double>& psd) {
+  M<N, N> Q;
+  Q.setConstant(0);
+  int offset_x = 0;
+  for (int i=0;i<orders.size();++i) {
+    int n = orders[i];
+    Q(offset_x+n-1, offset_x+n-1) = psd[i];
+    offset_x+= orders[i];
+  }
+  return Q;
+}
+
 template <class Measurements, int... order>
 class KinematicKalmanFilter:  public KalmanFilter< pack_add(order...), 0, Measurements> {
 public:
-  KinematicKalmanFilter(const std::vector<double>& psd) :
-      KalmanFilter<pack_add(order...), 0, Measurements>() {
 
-    constexpr int N = pack_add(order...);
-    std::vector<int> orders = {order...};
+  KinematicKalmanFilter(const std::vector<double>& psd, int buffer=100) :
+      KalmanFilter<pack_add(order...), 0, Measurements>(
+          KinematicA< pack_add(order...) >({order...}),
+          KinematicB< pack_add(order...) >({order...}),
+          KinematicQ< pack_add(order...) >({order...}, psd), buffer) {
 
-    // Contruct A
-    M<N, N> A;
-    A.setConstant(0);
-    int offset_x = 0;
-    offset_.push_back(offset_x);
-    for (int i=0;i<orders.size();++i) {
-      int n = orders[i];
-      A.block(offset_x, offset_x, n, n) << Md::Zero(n, 1), Md::Identity(n, n-1);
-      offset_x+= orders[i];
-      offset_.push_back(offset_x);
-    }
-
-    // Contruct Q
-    M<N, N> Q;
-    Q.setConstant(0);
-    offset_x = 0;
-    for (int i=0;i<orders.size();++i) {
-      int n = orders[i];
-      Q(offset_x+n-1, offset_x+n-1) = psd[i];
-      offset_x+= orders[i];
-    }
-
-    // Kinematic model has no input
-    M<N, 0> B;
-
-    this->set_dynamics(A, B, Q);
   }
-
-  std::vector<int> offset_;
 
 };

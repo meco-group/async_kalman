@@ -65,7 +65,7 @@ class OdometryObservations {
 template<int Nm>
 class OdometryFilter : public KinematicKalmanFilter<OdometryObservations<Nm>, 2, 2, 2> {
   public:
-  OdometryFilter(double psd_x, double psd_y, double psd_theta);
+  OdometryFilter(double psd_x, double psd_y, double psd_theta, int buffer=100);
 
   /**
     Set the Kalman filter to the origin and with large covariance

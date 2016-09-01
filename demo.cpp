@@ -46,14 +46,15 @@ int main ( int argc , char *argv[] ) {
     v << x,y;
     std::cout << v << std::endl;
     Mmeas = (R*Mref.transpose()+v*I).transpose();
-    of.observe_markers(t, Mmeas, Mref, 0.1);
+    of.observe_markers(t, Mmeas, Mref, pow(0.01, 2));
     of.predict(t, xp, Pp);
     std::cout << xp.format(fm) << std::endl;
     std::cout << Pp.format(fm) << std::endl;
+    std::cout << "n" << std::endl;
     t+= 0.01;
 
 
-    if (t>=2) break;
+    if (t>=10) break;
   }
 
 }
