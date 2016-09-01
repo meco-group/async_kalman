@@ -30,7 +30,7 @@ int main ( int argc , char *argv[] ) {
     M<3, 2> Mref;
     Mref << 0.1, 0.1, 0.1, -0.1, 0, 0;
     M<3, 2> Mmeas = Mref;
-    of.observe_markers(-10000, Mmeas, Mref, pow(0.01, 2));
+    //of.observe_markers(-10000, Mmeas, Mref, pow(0.01, 2));
     M<6, 1> xp;
     M<6, 6> Pp;
     of.predict(3, xp, Pp);
@@ -54,11 +54,9 @@ int main ( int argc , char *argv[] ) {
   generator.seed(0);
   std::uniform_real_distribution<double> distribution(0.0, 6.0);
 
-  srand(0);
-
   for(int i=0;i<100;++i) {
-    //double t = distribution(generator);
-    double t = rand()*6;
+    double t = distribution(generator);
+
     f(t, x, y, theta);
     transform_R_dR(theta, R, dR);
 
