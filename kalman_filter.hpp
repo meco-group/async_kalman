@@ -84,7 +84,7 @@ class EventBuffer {
 public:
   typedef std::multimap< double, KalmanEvent<N, Nu, Measurements>* > EventMap;
   typedef typename EventMap::iterator EventMapIt;
-  EventBuffer(int max_size) : event_pool_(max_size), max_size_(max_size) {}
+  EventBuffer(int max_size) : max_size_(max_size), event_pool_(max_size) {}
 
   // Get available event
   KalmanEvent<N, Nu, Measurements>* pop_event() {
@@ -129,7 +129,7 @@ private:
   EventMap buffer_;
 
   // How many pre-allocated events have been used up
-  int pool_count = 0;
+  size_t pool_count = 0;
 };
 
 /** \brief Kalman Filter
@@ -164,6 +164,7 @@ public:
       if (it==a || it==b) return it;
     }
     assert(false);
+    return buffer_.end();
   }
 
   void update() {

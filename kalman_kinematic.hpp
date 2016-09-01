@@ -58,7 +58,7 @@ M<N, N> KinematicA(const std::vector<int>& orders) {
   M<N, N> A;
   A.setConstant(0);
   int offset_x = 0;
-  for (int i=0;i<orders.size();++i) {
+  for (size_t i=0;i<orders.size();++i) {
     int n = orders[i];
     A.block(offset_x, offset_x, n, n) << Md::Zero(n, 1), Md::Identity(n, n-1);
     offset_x+= orders[i];
@@ -76,7 +76,7 @@ M<N, N> KinematicQ(const std::vector<int>& orders, const std::vector<double>& ps
   M<N, N> Q;
   Q.setConstant(0);
   int offset_x = 0;
-  for (int i=0;i<orders.size();++i) {
+  for (size_t i=0;i<orders.size();++i) {
     int n = orders[i];
     Q(offset_x+n-1, offset_x+n-1) = psd[i];
     offset_x+= orders[i];
