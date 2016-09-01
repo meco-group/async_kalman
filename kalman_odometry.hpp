@@ -25,14 +25,16 @@
 class OdometryGenericObservation  {
 public:
   enum {OFF_X = 0, OFF_Y = 2, OFF_THETA = 4};
-  void transform_R_dR(double theta, M<2,2>& A, M<2,2>& B);
+  void transform_R_dR(double theta, M<2, 2>& A, M<2, 2>& B);
 };
 
 
 class OdometryObservation : public KalmanObservation<6, 0>, OdometryGenericObservation {
 public:
-  virtual void observe(const M<6, 1>& x, const M<6, 6>& S, const M<0, 1>& u, M<6, 1>& xp, M<6, 6>& Sp);
-  void set(double V_X, double V_Y, double omega, double sigma_X, double sigma_Y, double sigma_omega);
+  virtual void observe(const M<6, 1>& x, const M<6, 6>& S, const M<0, 1>& u,
+    M<6, 1>& xp, M<6, 6>& Sp);
+  void set(double V_X, double V_Y, double omega,
+    double sigma_X, double sigma_Y, double sigma_omega);
 
 private:
   M<3, 1> V;
@@ -44,12 +46,13 @@ private:
 template<int Nm>
 class markerObservation : public KalmanObservation<6, 0>, OdometryGenericObservation {
 public:
-  virtual void observe(const M<6, 1>& x, const M<6, 6>& S, const M<0, 1>& u, M<6, 1>& xp, M<6, 6>& Sp);
+  virtual void observe(const M<6, 1>& x, const M<6, 6>& S, const M<0, 1>& u,
+      M<6, 1>& xp, M<6, 6>& Sp);
   void set(const M<Nm, 2>& pattern_meas, const M<Nm, 2>& pattern_ref, double sigma);
 
 private:
-  M<Nm,2> pattern_meas_;
-  M<Nm,2> pattern_ref_;
+  M<Nm, 2> pattern_meas_;
+  M<Nm, 2> pattern_ref_;
   double sigma_;
 
   KalmanObserver<6, 0, 2*Nm> ko;
@@ -83,7 +86,8 @@ class OdometryFilter : public KinematicKalmanFilter<OdometryObservations<Nm>, 2,
       omega: uncertainty on omega [rad^2/s^2]
 
   */
-  void observe_odo(double t, double V_X, double V_Y, double omega, double sigma_X, double sigma_Y, double sigma_omega);
+  void observe_odo(double t, double V_X, double V_Y, double omega,
+    double sigma_X, double sigma_Y, double sigma_omega);
 
   /**
     Observe markers on objects:
@@ -92,7 +96,8 @@ class OdometryFilter : public KinematicKalmanFilter<OdometryObservations<Nm>, 2,
 
       sigma: uncertainty on pattern_meas [m^2]
   */
-  void observe_markers(double t, const M<Nm,2>& pattern_meas, const M<Nm,2>& pattern_ref, double sigma);
+  void observe_markers(double t, const M<Nm, 2>& pattern_meas,
+    const M<Nm, 2>& pattern_ref, double sigma);
 };
 
 extern template class OdometryFilter<3>;

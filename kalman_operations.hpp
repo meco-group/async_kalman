@@ -41,9 +41,11 @@ void slicot_mb05nd(int n, double delta, const double* A, int lda,
                    double tol, f_int* iwork, double* dwork, int ld_work, int& info);
 
 template<int N>
-void expm(const M<N, N>& A, double t, M<N, N>& Ae, M<N, N>& Aei, std::vector<f_int>& iwork, std::vector<double>& dwork) {
+void expm(const M<N, N>& A, double t, M<N, N>& Ae, M<N, N>& Aei,
+    std::vector<f_int>& iwork, std::vector<double>& dwork) {
   int info;
-  slicot_mb05nd(N, t, A.data(), N, Ae.data(), N, Aei.data(), N, 1e-7, &iwork[0], &dwork[0], 2*N*N, info);
+  slicot_mb05nd(N, t, A.data(), N, Ae.data(), N, Aei.data(), N, 1e-7, &iwork[0], &dwork[0], 2*N*N,
+    info);
 }
 
 /**
@@ -158,7 +160,9 @@ public:
     Also needs a value for the sample-and-hold input (u)
 
   */
-  void observe(const M<N, 1>& x, const M<N, N>& S, M<N, 1>& xp, M<N, N>& Sp, const M<Ny, N>& C, const M<Ny, Nu>& D, const M<Ny, Ny>& R, const M<Ny, 1>& z, const M<Nu, 1>& u) {
+  void observe(const M<N, 1>& x, const M<N, N>& S, M<N, 1>& xp, M<N, N>& Sp,
+      const M<Ny, N>& C, const M<Ny, Nu>& D, const M<Ny, Ny>& R, const M<Ny, 1>& z,
+      const M<Nu, 1>& u) {
     // Output
     zp = C*x+D*u;
 
@@ -185,7 +189,8 @@ public:
     }
   }
   /** observe variant without inputs */
-  void observe(const M<N, 1>& x, const M<N, N>& S, M<N, 1>& xp, M<N, N>& Sp, const M<Ny, N>& C, const M<Ny, Ny>& R, const M<Ny, 1>& z) {
+  void observe(const M<N, 1>& x, const M<N, N>& S, M<N, 1>& xp, M<N, N>& Sp,
+      const M<Ny, N>& C, const M<Ny, Ny>& R, const M<Ny, 1>& z) {
     u.setConstant(0);
     Dm.setConstant(0);
     observe(x, S, xp, Sp, C, Dm, R, z, u);

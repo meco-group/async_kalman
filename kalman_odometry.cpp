@@ -25,14 +25,15 @@
 
 template class OdometryFilter<3>;
 
-void OdometryGenericObservation::transform_R_dR(double theta, M<2,2>& A, M<2,2>& B) {
+void OdometryGenericObservation::transform_R_dR(double theta, M<2, 2>& A, M<2, 2>& B) {
   double st = sin(theta);
   double ct = cos(theta);
   A << ct, -st, st, ct;
   B << -st, -ct, ct, -st;
 }
 
-void OdometryObservation::observe(const M<6, 1>& x, const M<6, 6>& S, const M<0, 1>& u, M<6, 1>& xp, M<6, 6>& Sp) {
+void OdometryObservation::observe(const M<6, 1>& x, const M<6, 6>& S, const M<0, 1>& u,
+    M<6, 1>& xp, M<6, 6>& Sp) {
   M<2, 2> R, dR;
 
   transform_R_dR(x(OFF_THETA), R, dR);
@@ -54,7 +55,8 @@ void OdometryObservation::observe(const M<6, 1>& x, const M<6, 6>& S, const M<0,
   ko.observe(x, S, xp, Sp, H, Sigma, V-r);
 }
 
-void OdometryObservation::set(double V_X, double V_Y, double omega, double sigma_X, double sigma_Y, double sigma_omega) {
+void OdometryObservation::set(double V_X, double V_Y, double omega,
+    double sigma_X, double sigma_Y, double sigma_omega) {
   V << V_X, V_Y, omega;
   Sigma << sigma_X, 0, 0,   0, sigma_Y, 0,  0, 0, sigma_omega;
 }

@@ -40,7 +40,8 @@ void slicot_mb05nd(int n, double delta, const double* A, int lda,
    f_int info_ = 0;
    f_int ld_work_ = ld_work;
 
-   mb05nd_(&n_, &delta, A, &lda_, ex, &ldex_, exint, &ldexin_, &tol, iwork, dwork, &ld_work_, &info_);
+   mb05nd_(&n_, &delta, A, &lda_, ex, &ldex_, exint, &ldexin_, &tol, iwork, dwork, &ld_work_,
+     &info_);
 
    info = info_;
 
@@ -48,10 +49,4 @@ void slicot_mb05nd(int n, double delta, const double* A, int lda,
      std::cerr << "mb05nd error:" << info_ << std::endl;
    }
 
-}
-
-void expm(const Md& A, double t, Md& Ae, Md& Aei, std::vector<f_int>& iwork, std::vector<double>& dwork) {
-  int n = A.rows();
-  int info;
-  slicot_mb05nd(n, t, A.data(), n, Ae.data(), n, Aei.data(), n, 1e-7, &iwork[0], &dwork[0], 2*n*n, info);
 }

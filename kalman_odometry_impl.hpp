@@ -23,7 +23,8 @@
 #include "kalman_odometry.hpp"
 
 template<int Nm>
-void markerObservation<Nm>::observe(const M<6, 1>& x, const M<6, 6>& S, const M<0, 1>& u, M<6, 1>& xp, M<6, 6>& Sp) {
+void markerObservation<Nm>::observe(const M<6, 1>& x, const M<6, 6>& S, const M<0, 1>& u,
+    M<6, 1>& xp, M<6, 6>& Sp) {
   M<2, 2> R, dR;
 
   transform_R_dR(x(OFF_THETA), R, dR);
@@ -50,7 +51,8 @@ void markerObservation<Nm>::observe(const M<6, 1>& x, const M<6, 6>& S, const M<
 }
 
 template<int Nm>
-void markerObservation<Nm>::set(const M<Nm, 2>& pattern_meas, const M<Nm, 2>& pattern_ref, double sigma) {
+void markerObservation<Nm>::set(const M<Nm, 2>& pattern_meas,
+    const M<Nm, 2>& pattern_ref, double sigma) {
   pattern_meas_ = pattern_meas;
   pattern_ref_ = pattern_ref;
   sigma_ = sigma;
@@ -64,11 +66,12 @@ OdometryFilter<Nm>::OdometryFilter(double psd_x, double psd_y, double psd_theta,
 
 template<int Nm>
 void OdometryFilter<Nm>::unknown(double t, double sigma) {
-  this->reset(t, M<6,1>::Zero(6, 1), sigma*M<6,6>::Identity(6, 6));
+  this->reset(t, M<6, 1>::Zero(6, 1), sigma*M<6, 6>::Identity(6, 6));
 }
 
 template<int Nm>
-void OdometryFilter<Nm>::observe_odo(double t, double V_X, double V_Y, double omega, double sigma_X, double sigma_Y, double sigma_omega) {
+void OdometryFilter<Nm>::observe_odo(double t, double V_X, double V_Y, double omega,
+    double sigma_X, double sigma_Y, double sigma_omega) {
   auto e = this->pop_event();
   e->active_observation = &e->m.odo;
   e->m.odo.set(V_X, V_Y, omega, sigma_X, sigma_Y, sigma_omega);
@@ -76,7 +79,8 @@ void OdometryFilter<Nm>::observe_odo(double t, double V_X, double V_Y, double om
 }
 
 template<int Nm>
-void OdometryFilter<Nm>::observe_markers(double t, const M<Nm,2>& pattern_meas, const M<Nm,2>& pattern_ref, double sigma) {
+void OdometryFilter<Nm>::observe_markers(double t, const M<Nm, 2>& pattern_meas,
+    const M<Nm, 2>& pattern_ref, double sigma) {
   auto e = this->pop_event();
   e->active_observation = &e->m.markers;
   e->m.markers.set(pattern_meas, pattern_ref, sigma);

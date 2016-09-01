@@ -30,14 +30,16 @@
 template <int N, int Nu>
 class KalmanObservation {
   public:
-  virtual void observe(const M<N, 1>& x, const M<N, N>& S, const M<Nu, 1>& u, M<N, 1>& xp, M<N, N>& Sp) = 0;
+  virtual void observe(const M<N, 1>& x, const M<N, N>& S, const M<Nu, 1>& u,
+    M<N, 1>& xp, M<N, N>& Sp) = 0;
 };
 
 /** \brief Observation consisting of constant C,D matrices */
 template <int N, int Nu, int Ny>
 class SimpleObservation : public KalmanObservation<N, Nu> {
 public:
-  virtual void observe(const M<N, 1>& x, const M<N, N>& S, const M<Nu, 1>& u, M<N, 1>& xp, M<N, N>& Sp) {
+  virtual void observe(const M<N, 1>& x, const M<N, N>& S, const M<Nu, 1>& u,
+      M<N, 1>& xp, M<N, N>& Sp) {
     ko.observe(x, S, xp, Sp, C_, D_, R_, z_, u);
   }
   void set(const M<Ny, N>&C, const M<Ny, Nu> &D, const M<Ny, Ny>&R, const M<Ny, 1>&z) {
@@ -139,7 +141,8 @@ template <int N, int Nu, class Measurements>
 class KalmanFilter {
 public:
   using EventMapIt = typename std::multimap< double, KalmanEvent<N, Nu, Measurements>* >::iterator;
-  KalmanFilter(const M<N, N>&A, const M<N, Nu>&B, const M<N, N>&Q, int buffer=100) : buffer_(buffer), A_(A), B_(B), Q_(Q) {
+  KalmanFilter(const M<N, N>&A, const M<N, Nu>&B, const M<N, N>&Q, int buffer=100) :
+      buffer_(buffer), A_(A), B_(B), Q_(Q) {
     work_todo = buffer_.end();
   }
 
@@ -190,9 +193,11 @@ public:
     for (auto it=it_insert;it!=buffer_.end();++it) {
       if (it->second->active_observation) {
         // Propagate from starting value to current
-        kp.propagate(*x_ref, *S_ref, it->first-t_ref, it->second->x_cache, it->second->S_cache, A_, B_, Q_, u_ref);
+        kp.propagate(*x_ref, *S_ref, it->first-t_ref, it->second->x_cache, it->second->S_cache,
+          A_, B_, Q_, u_ref);
         // Measurement update
-        it->second->active_observation->observe(it->second->x_cache, it->second->S_cache, u_ref, it->second->x_cache, it->second->S_cache);
+        it->second->active_observation->observe(it->second->x_cache, it->second->S_cache, u_ref,
+          it->second->x_cache, it->second->S_cache);
       }
       // Current value becomes new starting value
       x_ref = &it->second->x_cache;
