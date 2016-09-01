@@ -107,6 +107,9 @@ public:
   EventMapIt end() {
     return buffer_.end();
   }
+  EventMapIt begin() {
+    return buffer_.begin();
+  }
 
   std::pair<EventMapIt, EventMapIt> equal_range(double t) {
     return buffer_.equal_range(t);
@@ -169,7 +172,13 @@ public:
     EventMapIt it_insert = work_todo;
     EventMapIt it_ref = it_insert;
 
-    if (it_insert->second->active_observation) --it_ref;
+    if (it_insert->second->active_observation) {
+      if (it_ref == buffer_.begin()) {
+        std::cerr << "Error: First Kalman Event should be a reset" << std::endl;
+        exit(1);
+      }
+      --it_ref;
+    }
 
     // Obtain previous starting value
     const M<N, 1>* x_ref = &it_ref->second->x_cache;

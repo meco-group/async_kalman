@@ -1,7 +1,7 @@
 #include "kalman_odometry.hpp"
 #include <iostream>
 #include <iomanip>
-
+#include <random>
 
 void f(double t, double&x, double&y, double&theta) {
   x = sin(t);
@@ -23,6 +23,18 @@ int main ( int argc , char *argv[] ) {
   std::cout << std::scientific;
   Eigen::IOFormat fm(5, Eigen::DontAlignCols, " ", "\n", "[", "]", "[", "]");
 
+  {
+    OdometryFilter<3> of(1, 1, 0.1);
+
+    of.unknown(-1);
+    M<3, 2> Mref;
+    Mref << 0.1, 0.1, 0.1, -0.1, 0, 0;
+    M<3, 2> Mmeas = Mref;
+    of.observe_markers(-10000, Mmeas, Mref, pow(0.01, 2));
+    M<6, 1> xp;
+    M<6, 6> Pp;
+    of.predict(3, xp, Pp);
+  }
   OdometryFilter<3> of(1, 1, 0.1);
 
   of.unknown(-1);
@@ -38,23 +50,24 @@ int main ( int argc , char *argv[] ) {
 
   double x, y, theta;
 
-  double t = 0;
-  while(true) {
+  std::default_random_engine generator;
+  generator.seed(0);
+  std::uniform_real_distribution<double> distribution(0.0, 6.0);
+
+  srand(0);
+
+  for(int i=0;i<100;++i) {
+    //double t = distribution(generator);
+    double t = rand()*6;
     f(t, x, y, theta);
     transform_R_dR(theta, R, dR);
 
     v << x,y;
-    std::cout << v << std::endl;
     Mmeas = (R*Mref.transpose()+v*I).transpose();
     of.observe_markers(t, Mmeas, Mref, pow(0.01, 2));
-    of.predict(t, xp, Pp);
+    of.predict(3, xp, Pp);
     std::cout << xp.format(fm) << std::endl;
     std::cout << Pp.format(fm) << std::endl;
-    std::cout << "n" << std::endl;
-    t+= 0.01;
-
-
-    if (t>=10) break;
   }
 
 }
