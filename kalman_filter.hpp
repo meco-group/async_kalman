@@ -194,8 +194,8 @@ public:
         it->second->active_observation->observe(it->second->x_cache, it->second->S_cache, u_ref, it->second->x_cache, it->second->S_cache);
       }
       // Current value becomes new starting value
-      M<N, 1>* x_ref = &it->second->x_cache;
-      M<N, N>* S_ref = &it->second->S_cache;
+      x_ref = &it->second->x_cache;
+      S_ref = &it->second->S_cache;
       t_ref =  it->first;
     }
     // Nothing to do
