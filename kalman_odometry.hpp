@@ -65,9 +65,24 @@ class OdometryObservations {
   markerObservation<N> markers;
 };
 
+/**
+ * OdometryFilter is a Kalman filter tracking a rigid body in a plane.
+ * 
+ * The states being tracked are x, y and theta [m],[m],[rad].
+ * Kinematic models of order n=2 (constant velocity) are used for each coordinate.
+ * 
+ */
 template<int Nm>
 class OdometryFilter : public KinematicKalmanFilter<OdometryObservations<Nm>, 2, 2, 2> {
   public:
+  /** 
+   * Initialize the OdometryFilter, given noise levels for the x,y and theta models.
+   * These noises are acceleration-like squared [(m/s^2)^2]
+   * 
+   * E.g. if the rigid body is on a slippery hilly landscape, innovations in the kimenatic kalman filter
+   * may be on the order of gravity. In that case you could set psd_x and psd_y to 9.81^2
+   * 
+   */
   OdometryFilter(double psd_x, double psd_y, double psd_theta, int buffer=100);
 
   /**
