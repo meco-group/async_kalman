@@ -31,8 +31,8 @@ int main ( int argc , char *argv[] ) {
     Mref << 0.1, 0.1, 0.1, -0.1, 0, 0;
     M<3, 2> Mmeas = Mref;
     //of.observe_markers(-10000, Mmeas, Mref, pow(0.01, 2));
-    M<6, 1> xp;
-    M<6, 6> Pp;
+    M<3, 1> xp;
+    M<3, 3> Pp;
     of.predict(3, xp, Pp);
   }
   int n = 200;
@@ -46,8 +46,8 @@ int main ( int argc , char *argv[] ) {
   M<2, 2> R, dR;
   M<2, 1> v;
   M<1, 3> I = M<1, 3>::Ones(1, 3);
-  M<6, 1> xp;
-  M<6, 6> Pp;
+  M<3, 1> xp;
+  M<3, 3> Pp;
 
   double x, y, theta;
 

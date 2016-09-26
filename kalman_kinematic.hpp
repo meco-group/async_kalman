@@ -67,8 +67,8 @@ M<N, N> KinematicA(const std::vector<int>& orders) {
 }
 
 template <int N>
-M<N, 0> KinematicB(const std::vector<int>& orders) {
-  return M<N, 0>();
+M<N, N> KinematicB(const std::vector<int>& orders) {
+  return Md::Identity(N, N);
 }
 
 template <int N>
@@ -85,11 +85,11 @@ M<N, N> KinematicQ(const std::vector<int>& orders, const std::vector<double>& ps
 }
 
 template <class Measurements, int... order>
-class KinematicKalmanFilter:  public KalmanFilter< pack_add(order...), 0, Measurements> {
+class KinematicKalmanFilter:  public KalmanFilter< pack_add(order...), pack_add(order...), Measurements> {
 public:
 
   KinematicKalmanFilter(const std::vector<double>& psd, int buffer=100) :
-      KalmanFilter<pack_add(order...), 0, Measurements>(
+      KalmanFilter<pack_add(order...), pack_add(order...), Measurements>(
           KinematicA< pack_add(order...) >({order...}),
           KinematicB< pack_add(order...) >({order...}),
           KinematicQ< pack_add(order...) >({order...}, psd), buffer) {
