@@ -197,7 +197,7 @@ public:
           A_, B_, Q_, *u_ref);
         // Measurement update
         it->second->active_observation->observe(
-          it->second->x_cache, it->second->S_cache, it->second->u_cache,
+          it->second->x_cache, it->second->S_cache, *u_ref,
           it->second->x_cache, it->second->S_cache, it->second->u_cache);
       }
       // Current value becomes new starting value
