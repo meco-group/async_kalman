@@ -1,0 +1,46 @@
+#IncludeRegexLine: ^[ 	]*#[ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/ruben/Desktop/async_kalman/kalman_filter.hpp
+kalman_operations.hpp
+/home/ruben/Desktop/async_kalman/kalman_operations.hpp
+vector
+-
+map
+-
+iostream
+-
+assert.h
+-
+
+/home/ruben/Desktop/async_kalman/kalman_kinematic.hpp
+kalman_filter.hpp
+/home/ruben/Desktop/async_kalman/kalman_filter.hpp
+
+/home/ruben/Desktop/async_kalman/kalman_odometry.hpp
+kalman_kinematic.hpp
+/home/ruben/Desktop/async_kalman/kalman_kinematic.hpp
+
+/home/ruben/Desktop/async_kalman/kalman_operations.hpp
+Eigen/Dense
+-
+vector
+-
+map
+-
+iostream
+-
+assert.h
+-
+
+/home/ruben/Desktop/async_kalman/test2.cpp
+kalman_odometry.hpp
+/home/ruben/Desktop/async_kalman/kalman_odometry.hpp
+iostream
+-
+

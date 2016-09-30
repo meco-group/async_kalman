@@ -1,0 +1,1 @@
+/usr/bin/c++   -std=c++11 -Wall -g    CMakeFiles/test2.dir/test2.cpp.o  -o test2 -rdynamic libasync_kalman.so -lslicot -Wl,-rpath,/home/ruben/Desktop/async_kalman 

@@ -60,7 +60,11 @@ M<N, N> KinematicA(const std::vector<int>& orders) {
   int offset_x = 0;
   for (size_t i=0;i<orders.size();++i) {
     int n = orders[i];
-    A.block(offset_x, offset_x, n, n) << Md::Zero(n, 1), Md::Identity(n, n-1);
+    if (n-1>0) {
+      A.block(offset_x, offset_x, n, n) << Md::Zero(n, 1), Md::Identity(n, n-1);
+    } else {
+      A.block(offset_x, offset_x, n, n) << Md::Zero(n, 1);
+    }
     offset_x+= orders[i];
   }
   return A;

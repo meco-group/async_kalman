@@ -39,24 +39,24 @@ int main( int argc , char *argv[] ){
     kalman.predict(2, x2, P2); assertEqual(x2, {10, 0, 0});
     kalman.observe_odo(1, -5,0,0);
     kalman.predict(2, x2, P2); assertEqual(x2, {0, 0, 0});
-    
+
     kalman.observe_odo(2, 0, 3, 0);
     kalman.predict(3, x2, P2); assertEqual(x2, {0, 3, 0});
-    
+
     double omega = 0.1;
     double theta = omega*1;
     kalman.observe_odo(2, 0, 0, omega);
     kalman.predict(3, x2, P2); assertEqual(x2, {0, 0, theta});
-    
+
     kalman.observe_odo(3, 1, 0, 0);
     kalman.predict(4, x2, P2); assertEqual(x2, {cos(theta), sin(theta), omega});
-    
+
     {
       // init kalman
       OdometryFilter<3> kalman(1, 1, 1);
       kalman.unknown(0);
-      
-      
+
+
       Mmeas << 0.6, 1.1, 0.6, 0.9, 0.5, 1;
       kalman.observe_markers(1.0, Mmeas, Mref, 0.1);
       std::cout << "prediction at t=5s" << std::endl;
@@ -88,7 +88,7 @@ int main( int argc , char *argv[] ){
       kalman.predict(5, x2, P2);
       std::cout << x2.format(f) << std::endl;
       std::cout << P2.format(f) << std::endl;
-    
+
     }
 
     // of.observe_odo(4, 5,0,0, 1,2,0.1);
