@@ -22,18 +22,18 @@ int main( int argc , char *argv[] ){
     Mref << 0.1, 0.1, 0.1, -0.1, 0.0, 0.0;
 
     // init kalman
-    OdometryFilter<3> kalman(0.1, 0.1, 0.1);
+    OdometryFilter<3> kalman(0.1, 0.1, 0.1, 10000);
     kalman.unknown(-1);
 
     double time = 0.0;
     double ts = 0.01; // sample time
-    double delay = 0.2; // delay + sample time of marker measurements
+    double delay = 0.25; // delay + sample time of marker measurements
     double start_time = 2.0;
-    double velocity_time = 4.0;
+    double velocity_time = 2.0;
     double end_time = 2.0;
     double velocity = 0.8;
 
-    double start_position = 1.0;;
+    double start_position = 0.0;;
 
     double current_vel = 0.0;
     int cnt = 0;
@@ -41,8 +41,9 @@ int main( int argc , char *argv[] ){
 
     std::vector<double> real_position((end_time+velocity_time+start_time)/ts);
 
-    ofstream file;
+    ofstream file, file_pos;
     file.open("log.txt");
+    file_pos.open("log_pos.txt");
 
     // start
     while(true){
@@ -54,28 +55,46 @@ int main( int argc , char *argv[] ){
       } else {
         real_position[cnt] = real_position[cnt-1] + ts*current_vel;
       }
+
+      file_pos << real_position[cnt] << "\n";
       // change velocity
       if (time == start_time){
         current_vel = velocity;
+        std::cout << cnt << std::endl;
       }
       if (time == start_time+velocity_time){
         current_vel = 0.0;
       }
       // kalman
-      std::cout << time << std::endl;
+      // std::cout << time << std::endl;
       kalman.observe_odo(time, current_vel, 0, 0);
       if (cnt%delay_cnt == 0){
         double pos = real_position[cnt-delay_cnt];
         Mmeas << 0.1+pos, 0.1, 0.1+pos, -0.1, pos, 0;
-        kalman.observe_markers(time-delay, Mmeas, Mref, 0.1);
+        kalman.observe_markers(time-delay, Mmeas, Mref, 0.01);
       }
-      kalman.predict(time, x, P);
-      file << x[0] << "\n";
-      if (time >= start_time+velocity+end_time){
+      // kalman.predict(time, x, P);
+      // file << x[0] << "\n";
+      if (time >= start_time+velocity_time+end_time){
         break;
       }
       cnt++;
     }
+
+    cnt = 0;
+    double ts2 = 0.01;
+    while(true){
+      time = cnt*ts2;
+      // std::cout << time << std::endl;
+      kalman.predict(time, x, P);
+      file << x[0] << "\n";
+      if (time >= start_time+velocity_time+end_time){
+        break;
+      }
+      cnt++;
+    }
+
     file.close();
+    file_pos.close();
     return 0;
 }
