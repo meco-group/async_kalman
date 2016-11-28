@@ -46,7 +46,7 @@ void OdometryObservation::observe(const M<6, 1>& x, const M<6, 6>& S, const M<0,
   H(2, OFF_THETA+1) = 1;
   H.block(0, OFF_X+1, 2, 1) = R.transpose().block(0, 0, 2, 1);
   H.block(0, OFF_Y+1, 2, 1) = R.transpose().block(0, 1, 2, 1);
-  H.block(0, OFF_THETA, 2, 1) = dR*v;
+  H.block(0, OFF_THETA, 2, 1) = dR.transpose()*v;
 
   M<2, 1> h = R.transpose()*v;
   M<3, 1> r;
